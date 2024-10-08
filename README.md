@@ -18,6 +18,7 @@ This Python script automates the creation of accessibility remediation Product B
 
 ## Installation
 
+0. **Install python3 using npm**: `npm i python3` [see npm docs](https://www.npmjs.com/package/python3)
 1. **Clone this repo**.
 2. **Install the required Python libraries** using pip3:
    ```
