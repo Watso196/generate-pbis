@@ -45,7 +45,7 @@ Download an Excel copy of your accessibility audit report.
 
 If you do not already have an ADO Personal Access Token (PAT) then follow these steps:
 
-1. (Visit ADO)[https://tfs.clarkinc.biz/DefaultCollection/_work]
+1. [Visit ADO](https://tfs.clarkinc.biz/DefaultCollection/_work)
 2. Select your user settings menu item in the top left of the screen
 3. Select "Security" from the popup menu to be taken to the Security page
 4. If you haven't landed on the Personal Access Tokens page, use the left-hand sidebar to navigate to Personal Access Tokens
@@ -72,7 +72,7 @@ python3 create.py
 
 ### Test It Out!
 
-The folder for this script also contains a test audit file linked to a (Test Feature)[https://tfs.clarkinc.biz/DefaultCollection/Design/_workitems/edit/1195637]. Feel free to run this script against the provided audit file and check the feature for the created PBIs.
+The folder for this script also contains a test audit file linked to a [Test Feature](https://tfs.clarkinc.biz/DefaultCollection/Design/_workitems/edit/1195637). Feel free to run this script against the provided audit file and check the feature for the created PBIs.
 
 Using this test file can also help debug issues with the script should you run into any.
 
