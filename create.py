@@ -180,6 +180,13 @@ def create_pbis_from_excel(excel_path, pat):
             resources_html = "".join(resources_list) if resources_list else ""
             # Format the description with escaped content
             description = (
+                "Please check the following (and delete this list when you're done!):"
+                "<ul>"
+                "<li>Combine any easily combine-able work into one PBI, rather than making them separate work items.</li>"
+                "<li>Please keep your PBI scope to an 8 effort or lower, if possible.</li>"
+                "<li>Check your tags! Aside from generated tags, you should add a tag for the site that was tested, e.g. WSS</li>"
+                "<li>If your PBI needs a predecessor research PBI, create one and add the tags Spike, [Page Name] Page, Ready for Refinement. Then relate it to this PBI as a Predecessor!</li>"
+                "</ul>"
                 "<h1>PBI Goal</h1>"
                 f"<p>Update the {page_name_escaped} page's [general description of component update to be made] ...<p><br />"
                 "<ul>"
