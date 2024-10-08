@@ -18,14 +18,23 @@ This Python script automates the creation of accessibility remediation Product B
 
 ## Installation
 
-0. **Install python3 using npm**: `npm i python3` [see npm docs](https://www.npmjs.com/package/python3)
-1. **Clone this repo**.
-2. **Install the required Python libraries** using pip3:
+1. **Install python3 using npm**: `npm i python3` (see [npm docs](https://www.npmjs.com/package/python3))
+2. **Clone this repo**.
+3. **Install the required Python libraries** using pip3:
    ```
    pip3 install pandas openpyxl requests
    ```
 
-## Preparation
+## Environment Variables
+
+This repo uses the [python-dotenv](https://pypi.org/project/python-dotenv/) package. Follow the steps below to add environment variables.
+
+- Create `.env` file in the root directory
+- Add `ORG_URL = "[url_goes_here]"` to the `.env` file
+- Create a `.gitignore` file and add `.env` to it
+- Install the `python-dotenv` package: `pip3 install python-dotenv`
+
+## Spreadsheet Preparation
 
 Ensure that the relevant report details are filled out:
 

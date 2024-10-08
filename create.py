@@ -1,13 +1,18 @@
 import requests
 import json
-import os
 import pandas as pd
 from requests.auth import HTTPBasicAuth
 import openpyxl
 import html 
+import os
+
+from dotenv import find_dotenv, load_dotenv
+
+dotenv_path = find_dotenv()
+load_dotenv(dotenv_path)
 
 # TFS configuration
-ORG_URL = "https://tfs.clarkinc.biz/DefaultCollection"
+ORG_URL = os.getenv("ORG_URL")
 PROJECT = "Design"  # The project you're targeting
 API_VERSION = "6.0"  # Update to a newer version for better support
 
