@@ -31,7 +31,7 @@ This repo uses the [python-dotenv](https://pypi.org/project/python-dotenv/) pack
 
 - Create `.env` file in the root directory
 - Add `ORG_URL = "[url_goes_here]"` to the `.env` file
-- Create a `.gitignore` file and add `.env` to it (this may be automatically done when you create the `.env` file)
+- Create a `.gitignore` file and add `.env` to it
 - Install the `python-dotenv` package: `pip3 install python-dotenv`
 
 ## Spreadsheet Preparation
