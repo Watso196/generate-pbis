@@ -166,20 +166,26 @@ def create_pbis_from_excel(excel_path, pat):
             resource_cell = summary_sheet.cell(row=excel_row_number, column=resources_column_index)
 
             # Check if the 'Resources' cell has a value
-            if resource_cell.value:  # Only add if the cell has a value (whether it's a hyperlink or plain text)
+            if resource_cell.value:
                 resource_content = html.escape(resource_cell.value)
-                resources_list.append(f'<li><a href="{resource_cell.hyperlink}">{resource_content}</a></li>')
+                hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else "#"
+                resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
                 print(f"Added resource: {resource_content}")  # Debugging log
 
             # Now check the columns beyond 'Resources' (starting from the next column)
             for col_index in range(resources_column_index + 1, summary_sheet.max_column + 1):
                 resource_cell = summary_sheet.cell(row=excel_row_number, column=col_index)
 
-                # Check if the cell has a value (ignoring whether there's a hyperlink)
-                if resource_cell.value:  # Only add if the cell has a value
-                    resource_value = html.escape(resource_cell.value)
-                    resources_list.append(f'<li><a href="{resource_cell.hyperlink}">{resource_value}</a></li>')
-                    print(f"Added resource: {resource_value}")  # Debugging log
+                # Check if the cell has a value
+                if resource_cell.value:
+                    resource_content = html.escape(resource_cell.value)
+                    # Check if the cell has a hyperlink; if not, use the cell's value_cell.value
+                    hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else None
+                    if hyperlink is not None:
+                        resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
+                    else:
+                        resources_list.append(f'<li>{resource_content}</li>')
+                    print(f"Added resource: {resource_content}")  # Debugging log
 
             # Only generate the <ul> block if there's actual resource content
             resources_html = "".join(resources_list) if resources_list else ""
