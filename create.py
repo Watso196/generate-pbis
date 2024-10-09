@@ -181,7 +181,6 @@ def create_pbis_from_excel(excel_path, pat):
                     resource_content = html.escape(resource_cell.value)
                     # Check if the cell has a hyperlink; if not, use the cell's value_cell.value
                     hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else None
-                    resource_content = html.escape(resource_cell.value)
                     if hyperlink is not None:
                         resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
                     else:
