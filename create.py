@@ -178,7 +178,7 @@ def create_pbis_from_excel(excel_path, pat):
                 # Check if the cell has a value (ignoring whether there's a hyperlink)
                 if resource_cell.value:  # Only add if the cell has a value
                     resource_value = html.escape(resource_cell.value)
-                    resources_list.append(f'<li><a href="{resource_cell.hyperlink}">{resource_value}</a></li>'
+                    resources_list.append(f'<li><a href="{resource_cell.hyperlink}">{resource_value}</a></li>')
                     print(f"Added resource: {resource_value}")  # Debugging log
 
             # Only generate the <ul> block if there's actual resource content
