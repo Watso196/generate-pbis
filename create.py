@@ -178,7 +178,7 @@ def create_pbis_from_excel(excel_path, pat):
                 # Check if the cell has a value (ignoring whether there's a hyperlink)
                 if resource_cell.value:  # Only add if the cell has a value
                     resource_value = html.escape(resource_cell.value)
-                    resources_list.append(f"<li>{resource_value}</li>")
+                    resources_list.append(f'<li><a href="{resource_cell.hyperlink}">{resource_value}</a></li>'
                     print(f"Added resource: {resource_value}")  # Debugging log
 
             # Only generate the <ul> block if there's actual resource content
@@ -242,12 +242,12 @@ def create_pbis_from_excel(excel_path, pat):
         for row_index, pbi_url in pbi_urls:
             write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url)
 
-        print("UPDATED: All PBI URLs written into Excel file")
+        print("\nUPDATED: All PBI URLs written into Excel file\n")
 
         # Save the workbook after writing all URLs
         workbook.save(excel_path)
         
-        print("SUCCESS: PBI creation complete!")
+        print("\nSUCCESS: PBI creation complete!")
     
     except FileNotFoundError:
         print(f"ERROR: File {excel_path} not found. Please check the path and try again.")
