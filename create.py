@@ -5,6 +5,9 @@ from requests.auth import HTTPBasicAuth
 import openpyxl
 import html 
 import os
+import truststore
+
+truststore.inject_into_ssl()
 
 from dotenv import find_dotenv, load_dotenv
 
