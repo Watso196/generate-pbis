@@ -112,6 +112,12 @@ def create_pbis_from_excel(excel_path, pat):
         feature_id = report_details_sheet.cell(row=12, column=2).value
         testing_account_cell = report_details_sheet.cell(row=5, column=2)
 
+         #ensure Feature ID is not empty
+        if not feature_id:
+            print("ERROR: Feature ID is missing from the Report Details sheet. This must be filled in before creating PBIs.")
+            print("Exiting script early — no PBIs were created.\n")
+            return
+
          # Check that the page URL points to the development environment
         if str(page_url).startswith("https://www.webstaurantstore.com"):
             # If not a development URL, replace with the development URL
