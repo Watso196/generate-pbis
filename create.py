@@ -104,7 +104,7 @@ def create_pbis_from_excel(excel_path, pat):
         # Open the workbook and sheets
         workbook = openpyxl.load_workbook(excel_path)
         report_details_sheet = workbook['Report Details']
-        summary_sheet = workbook['Findings Summary']
+        summary_sheet = workbook['Evaluation']
         
         # Extract information from the 'Report Details' sheet
         page_name = report_details_sheet.cell(row=6, column=2).value
@@ -134,7 +134,7 @@ def create_pbis_from_excel(excel_path, pat):
             testing_account_html = ""  # If no hyperlink, leave it empty
 
         # Read the 'Findings Summary' sheet into a DataFrame
-        summary = pd.read_excel(excel_path, sheet_name='Findings Summary', engine='openpyxl')
+        summary = pd.read_excel(excel_path, sheet_name='Evaluation', engine='openpyxl')
 
         # Get the column index of the 'Resources, Screen Captures, Links' column
         resources_column_index = summary.columns.get_loc('Resources, Screen Captures, Links') + 1  # +1 for openpyxl index
@@ -149,6 +149,11 @@ def create_pbis_from_excel(excel_path, pat):
                 print(f"Skipped row {index + 2}, PBI already assigned.\n")
                 continue
 
+            # Skip rows that aren't Non-Compliant
+            if str(row.get('Conformance', '')).strip().lower() != "non-compliant":
+                print(f"Skipped row {index + 2}, Conformance is compliant.\n")
+                continue
+
             # Map the columns to the corresponding PBI fields
             title = f"Remediation - {page_name} - {row['Notes'][:50]}"  # Limiting title to 50 characters
 
@@ -158,6 +163,12 @@ def create_pbis_from_excel(excel_path, pat):
             notes_escaped = html.escape(row['Notes'])
             recommendation_escaped = html.escape(row['Conformance Recommendation'])
             remediation_escaped = html.escape(row['Remediation Techniques'])
+            description_escaped = html.escape(row.get('Description', "") or "")
+
+            remediation_list = f"<li>{remediation_escaped}</li>"
+            if description_escaped:
+                remediation_list += f"<li>Additional information: {description_escaped}</li>"
+
 
             # Build the resources list, only adding non-empty cells (ignoring whether there's a hyperlink or not)
             resources_list = []
@@ -207,7 +218,7 @@ def create_pbis_from_excel(excel_path, pat):
                 f'<li><a href="{page_url_escaped}">Reference page</a>{testing_account_html}</li>'  # Include the testing account only if it's valid
                 f"<li>{recommendation_escaped}</li>"
                 f"<li>{notes_escaped}</li>"
-                f"<ul><li>{remediation_escaped}</li></ul>"
+                f"<ul>{remediation_list}</ul>"
                 "<li>Resources:<ul>"
                 f"{resources_html}"
                 "</ul></li></ul><br />"
