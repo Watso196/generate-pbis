@@ -6,6 +6,7 @@ import openpyxl
 import html 
 import os
 import truststore
+from templates import build_description_html, build_acceptance_criteria_html
 
 truststore.inject_into_ssl()
 
@@ -99,8 +100,9 @@ def write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url):
         print("ERROR: 'Remediation PBI' column not found in the sheet.")
 
 # Helper to safely convert a value to string if needed
-def safe_str(val):
-    return str(val) if pd.notna(val) else ""
+# and escape HTML characters to prevent injection 
+def safe_html(val):
+    return html.escape(str(val)) if pd.notna(val) else ""
 
 # Main function to read the Excel file and create PBIs
 def create_pbis_from_excel(excel_path, pat):
@@ -155,9 +157,10 @@ def create_pbis_from_excel(excel_path, pat):
             for index, row in summary.iterrows():
                 group_val = row.get("Group")
                 if pd.notna(group_val):
-                    # Use safe_str for fields that might be empty
-                    remediation_val = html.escape(safe_str(row.get("Remediation Techniques", "")))
-                    description_val = html.escape(safe_str(row.get("Description", "")))
+                    # Use safe_html for fields that might be empty
+                    remediation_val = safe_html(row.get("Remediation Techniques", ""))
+                    description_val = safe_html(row.get("Description", ""))
+
                     
                     # Calculate Excel row number for resource extraction
                     excel_row_number = index + 2  
@@ -165,7 +168,7 @@ def create_pbis_from_excel(excel_path, pat):
                     for col_index in range(resources_column_index, summary_sheet.max_column + 1):
                         cell = summary_sheet.cell(row=excel_row_number, column=col_index)
                         if cell.value:
-                            resource_content = html.escape(safe_str(cell.value))
+                            resource_content = safe_html(cell.value)
                             hyperlink = cell.hyperlink.target if cell.hyperlink else "#"
                             if hyperlink != "#":
                                 resource_entries.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
@@ -202,11 +205,10 @@ def create_pbis_from_excel(excel_path, pat):
             # Escape the content to prevent HTML injection
             page_name_escaped = html.escape(page_name)
             page_url_escaped = html.escape(page_url)
-            notes_escaped = html.escape(safe_str(row.get('Notes', '')))
-            recommendation_escaped = html.escape(safe_str(row.get('Conformance Recommendation', '')))
-            remediation_escaped = html.escape(safe_str(row.get('Remediation Techniques', '')))
-            description_escaped = html.escape(safe_str(row.get('Description', '')))
-
+            notes_escaped = safe_html(row.get('Notes', ''))
+            recommendation_escaped = safe_html(row.get('Conformance Recommendation', ''))
+            remediation_escaped = safe_html(row.get('Remediation Techniques', ''))
+            description_escaped = safe_html(row.get('Description', ''))
            
             # For non-grouped rows, build the remediation_list which includes the "description" if present
                      # For non-grouped rows:
@@ -238,7 +240,7 @@ def create_pbis_from_excel(excel_path, pat):
 
             # Check if the 'Resources' cell has a value
             if resource_cell.value:
-                resource_content = html.escape(resource_cell.value)
+                resource_content = safe_html(resource_cell.value)
                 hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else "#"
                 resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
                 print(f"Added resource: {resource_content}")  # Debugging log
@@ -249,7 +251,7 @@ def create_pbis_from_excel(excel_path, pat):
 
                 # Check if the cell has a value
                 if resource_cell.value:
-                    resource_content = html.escape(resource_cell.value)
+                    resource_content = safe_html(cell.value)
                     # Check if the cell has a hyperlink; if not, use the cell's value_cell.value
                     hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else None
                     if hyperlink is not None:
@@ -261,43 +263,21 @@ def create_pbis_from_excel(excel_path, pat):
             # Only generate the <ul> block if there's actual resource content
             resources_html = "".join(resources_list) if resources_list else ""
             # Format the description with escaped content
-            description = (
-                "Please check the following (and delete this list when you're done!):"
-                "<ul>"
-                "<li>Combine any easily combine-able work into one PBI, rather than making them separate work items.</li>"
-                "<li>Please keep your PBI scope to an 8 effort or lower, if possible.</li>"
-                "<li>Check your tags! Aside from generated tags, you should add a tag for the site that was tested, e.g. WSS</li>"
-                "<li>If your PBI needs a predecessor research PBI, create one and add the tags Spike, [Page Name] Page, Ready for Refinement. Then relate it to this PBI as a Predecessor!</li>"
-                "</ul>"
-                "<h1>PBI Goal</h1>"
-                f"<p>Update the {page_name_escaped} page's [general description of component update to be made] ...<p><br />"
-                "<ul>"
-                f'<li><a href="{page_url_escaped}">Reference page</a>{testing_account_html}</li>'  # Include the testing account only if it's valid
-                f"<li>{recommendation_escaped}</li>"
-                f"<li>{notes_escaped}</li>"
-                f"<ul>{remediation_list}</ul>"
-                "<li>Resources:<ul>"
-                f"{resources_html}"
-                "</ul></li></ul><br />"
-                "<p>This change is important because [why this matters for users]</p>"
+            description = build_description_html(
+                page_name_escaped,
+                page_url_escaped,
+                testing_account_html,
+                recommendation_escaped,
+                notes_escaped,
+                remediation_list,
+                resources_html
             )
 
-            acceptance_criteria = (
-                "<h2>Testing Requirements</h2>"
-                "<ul><li>Keyboard</li>"
-                "<li>Screen Reader</li>"
-                "<li>HTML</li>"
-                "<li>etc. add any other kinds of testing you might need and remove those you don't!</li></ul>"
-                "<h2>Keyboard Testing</h2>"
-                f'<ul><li>Visit the <a href="{page_url_escaped}">{page_name_escaped} page</a></li>'
-                "<li>[List testing steps]</li></ul>"
-                "<h2>Screen Reader Testing</h2>"
-                f'<ul><li>Visit the <a href="{page_url_escaped}">{page_name_escaped} page</a></li>'
-                "<li>[List testing steps]</li></ul>"
-                "<h2>HTML</h2>"
-                f'<ul><li>Visit the <a href="{page_url_escaped}">{page_name_escaped} page</a></li>'
-                "<li>[List testing steps]</li></ul>"
+            acceptance_criteria = build_acceptance_criteria_html(
+                page_url_escaped,
+                page_name_escaped
             )
+
 
             priority = map_priority(row['Priority'])
             tags = f"Remediation,Accessibility,{page_name} Page"
