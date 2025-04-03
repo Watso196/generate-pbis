@@ -6,7 +6,14 @@ import openpyxl
 import html 
 import os
 import truststore
-from templates import build_description_html, build_acceptance_criteria_html
+from templates import (
+    build_description_html,
+    build_grouped_description_html,
+    build_acceptance_criteria_html,
+    render_grouped_remediations,
+    render_single_remediation
+)
+
 
 truststore.inject_into_ssl()
 
@@ -157,11 +164,7 @@ def create_pbis_from_excel(excel_path, pat):
             for index, row in summary.iterrows():
                 group_val = row.get("Group")
                 if pd.notna(group_val):
-                    # Use safe_html for fields that might be empty
-                    remediation_val = safe_html(row.get("Remediation Techniques", ""))
-                    description_val = safe_html(row.get("Description", ""))
-
-                    
+                                     
                     # Calculate Excel row number for resource extraction
                     excel_row_number = index + 2  
                     resource_entries = []
@@ -176,7 +179,15 @@ def create_pbis_from_excel(excel_path, pat):
                                 resource_entries.append(f'<li>{resource_content}</li>')
                     if group_val not in grouped_data:
                         grouped_data[group_val] = []
-                    grouped_data[group_val].append((remediation_val, description_val, resource_entries))
+                    grouped_data[group_val].append({
+                        "recommendation": safe_html(row.get("Conformance Recommendation", "")),
+                        "notes": safe_html(row.get("Notes", "")),
+                        "remediation": safe_html(row.get("Remediation Techniques", "")),
+                        "description": safe_html(row.get("Description", "")),
+                        "resources": resource_entries
+                    })
+
+
         
         # Dictionary to store created PBI URL for each group
         group_pbi_map = {}
@@ -210,25 +221,12 @@ def create_pbis_from_excel(excel_path, pat):
             remediation_escaped = safe_html(row.get('Remediation Techniques', ''))
             description_escaped = safe_html(row.get('Description', ''))
            
-            # For non-grouped rows, build the remediation_list which includes the "description" if present
-                     # For non-grouped rows:
-            remediation_list = f"<li>{remediation_escaped}</li>"
-            if description_escaped:
-                remediation_list += f"<li>Additional information: {description_escaped}</li>"
-            
-            # For grouped rows, override remediation_list with aggregated data:
+            # Check if this row is part of a group and render the remediation list accordingly           
             if pd.notna(group_val):
-                aggregated_list = ""
-                for rem_val, desc_val, res_list in grouped_data.get(group_val, []):
-                    aggregated_list += "<li>"
-                    aggregated_list += f"<strong>Remediation:</strong> {rem_val}"
-                    if desc_val:
-                        aggregated_list += f"<br><strong>Additional information:</strong> {desc_val}"
-                    if res_list:
-                        aggregated_list += "<br><strong>Resources:</strong><ul>" + "".join(res_list) + "</ul>"
-                    aggregated_list += "</li>"
-                remediation_list = aggregated_list
-
+                remediation_list = render_grouped_remediations(grouped_data.get(group_val, []))
+            else:
+                remediation_list = render_single_remediation(remediation_escaped, description_escaped)
+            
             # Build the resources list, only adding non-empty cells (ignoring whether there's a hyperlink or not)
             resources_list = []
 
@@ -262,17 +260,26 @@ def create_pbis_from_excel(excel_path, pat):
 
             # Only generate the <ul> block if there's actual resource content
             resources_html = "".join(resources_list) if resources_list else ""
-            # Format the description with escaped content
-            description = build_description_html(
-                page_name_escaped,
-                page_url_escaped,
-                testing_account_html,
-                recommendation_escaped,
-                notes_escaped,
-                remediation_list,
-                resources_html
-            )
-
+       
+            # Build the description HTML based on whether it's a grouped row or not
+            if pd.notna(group_val):
+                description = build_grouped_description_html(
+                        page_name_escaped,
+                        page_url_escaped,
+                        testing_account_html,
+                        remediation_list
+                )
+            else:
+                description = build_description_html(
+                    page_name_escaped,
+                    page_url_escaped,
+                    testing_account_html,
+                    recommendation_escaped,
+                    notes_escaped,
+                    remediation_list,
+                    resources_html
+    )
+            # Build the acceptance criteria HTML
             acceptance_criteria = build_acceptance_criteria_html(
                 page_url_escaped,
                 page_name_escaped
