@@ -13,6 +13,7 @@ from templates import (
     render_grouped_remediations,
     render_single_remediation
 )
+from resource_lookup import build_resource_lookup
 
 
 truststore.inject_into_ssl()
@@ -118,6 +119,7 @@ def create_pbis_from_excel(excel_path, pat):
         workbook = openpyxl.load_workbook(excel_path, data_only=True)
         report_details_sheet = workbook['Report Details']
         summary_sheet = workbook['Evaluation']
+        resource_lookup = build_resource_lookup(workbook)
         
         # Extract information from the 'Report Details' sheet
         page_name = report_details_sheet.cell(row=6, column=2).value
@@ -164,19 +166,26 @@ def create_pbis_from_excel(excel_path, pat):
             for index, row in summary.iterrows():
                 group_val = row.get("Group")
                 if pd.notna(group_val):
-                                     
-                    # Calculate Excel row number for resource extraction
                     excel_row_number = index + 2  
+                                     
+                    # Build the list of resource entries for grouped PBIs.
                     resource_entries = []
                     for col_index in range(resources_column_index, summary_sheet.max_column + 1):
                         cell = summary_sheet.cell(row=excel_row_number, column=col_index)
-                        if cell.value:
-                            resource_content = safe_html(cell.value)
-                            hyperlink = cell.hyperlink.target if cell.hyperlink else "#"
-                            if hyperlink != "#":
-                                resource_entries.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
+                        resource_text = cell.value.strip() if cell.value else None
+                        if resource_text:
+                            if cell.hyperlink:
+                                url = cell.hyperlink.target
+                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                                print(f"[GROUPED] Using manual hyperlink for '{resource_text}': {url}")
+                            elif resource_text in resource_lookup:
+                                url = resource_lookup[resource_text]
+                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                                print(f"[GROUPED] Resolved '{resource_text}' from DataLayer to: {url}")
                             else:
-                                resource_entries.append(f'<li>{resource_content}</li>')
+                                resource_entries.append(f'<li>{safe_html(resource_text)}</li>')
+                                print(f"[GROUPED] No link found for '{resource_text}', using plain text")
+
                     if group_val not in grouped_data:
                         grouped_data[group_val] = []
                     grouped_data[group_val].append({
@@ -235,13 +244,26 @@ def create_pbis_from_excel(excel_path, pat):
 
             # Get the 'Resources' cell from openpyxl
             resource_cell = summary_sheet.cell(row=excel_row_number, column=resources_column_index)
+            resource_text = resource_cell.value.strip() if resource_cell.value else None
 
-            # Check if the 'Resources' cell has a value
-            if resource_cell.value:
-                resource_content = safe_html(resource_cell.value)
-                hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else "#"
-                resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
-                print(f"Added resource: {resource_content}")  # Debugging log
+            if resource_text:
+                # Case 1: Manually inserted hyperlink
+                if resource_cell.hyperlink:
+                    url = resource_cell.hyperlink.target
+                    resources_list.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                    print(f"Using manual hyperlink for '{resource_text}': {url}")
+
+                # Case 2: Lookup in DataLayer sheet
+                elif resource_text in resource_lookup:
+                    url = resource_lookup[resource_text]
+                    resources_list.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                    print(f"Resolved '{resource_text}' from DataLayer to: {url}")
+
+                # Case 3: Just text, fallback
+                else:
+                    resources_list.append(f'<li>{safe_html(resource_text)}</li>')
+                    print(f"No link found for '{resource_text}', using plain text")
+
 
             # Now check the columns beyond 'Resources' (starting from the next column)
             for col_index in range(resources_column_index + 1, summary_sheet.max_column + 1):
@@ -311,7 +333,6 @@ def create_pbis_from_excel(excel_path, pat):
                     print(f"ERROR: Failed to create PBI for grouped row {index+2}.")
             else:
                 # Process non-grouped row normally
-                print(f"Creating individual PBI at row {index+2}...")
                 pbi_id = create_pbi(title, description, acceptance_criteria, priority, tags, pat)
                 if pbi_id:
                     pbi_url = f"{ORG_URL}/_workitems/edit/{pbi_id}"
