@@ -6,6 +6,15 @@ import openpyxl
 import html 
 import os
 import truststore
+from templates import (
+    build_description_html,
+    build_grouped_description_html,
+    build_acceptance_criteria_html,
+    render_grouped_remediations,
+    render_single_remediation
+)
+from resource_lookup import build_resource_lookup
+
 
 truststore.inject_into_ssl()
 
@@ -92,19 +101,29 @@ def write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url):
             remediation_pbi_column = col
             break
     
-    # If "Remediation PBI" column is found, write the PBI URL in the corresponding row and column
+    # Write the PBI URL as a clickable hyperlink
     if remediation_pbi_column:
-        summary_sheet.cell(row=row_index, column=remediation_pbi_column).value = pbi_url
+        cell = summary_sheet.cell(row=row_index, column=remediation_pbi_column)
+        cell.value = pbi_url
+        cell.hyperlink = pbi_url
+        cell.style = "Hyperlink"
     else:
         print("ERROR: 'Remediation PBI' column not found in the sheet.")
+
+
+# Helper to safely convert a value to string if needed
+# and escape HTML characters to prevent injection 
+def safe_html(val):
+    return html.escape(str(val)) if pd.notna(val) else ""
 
 # Main function to read the Excel file and create PBIs
 def create_pbis_from_excel(excel_path, pat):
     try:
         # Open the workbook and sheets
-        workbook = openpyxl.load_workbook(excel_path)
+        workbook = openpyxl.load_workbook(excel_path, data_only=True)
         report_details_sheet = workbook['Report Details']
         summary_sheet = workbook['Evaluation']
+        resource_lookup = build_resource_lookup(workbook)
         
         # Extract information from the 'Report Details' sheet
         page_name = report_details_sheet.cell(row=6, column=2).value
@@ -112,13 +131,13 @@ def create_pbis_from_excel(excel_path, pat):
         feature_id = report_details_sheet.cell(row=12, column=2).value
         testing_account_cell = report_details_sheet.cell(row=5, column=2)
 
-         #ensure Feature ID is not empty
+        #ensure feature_id is not empty
         if not feature_id:
             print("ERROR: Feature ID is missing from the Report Details sheet. This must be filled in before creating PBIs.")
             print("Exiting script early — no PBIs were created.\n")
             return
 
-         # Check that the page URL points to the development environment
+        # Check that the page URL points to the development environment
         if str(page_url).startswith("https://www.webstaurantstore.com"):
             # If not a development URL, replace with the development URL
             page_url_base = "https://www.dev.webstaurantstore.com"
@@ -139,11 +158,49 @@ def create_pbis_from_excel(excel_path, pat):
         else:
             testing_account_html = ""  # If no hyperlink, leave it empty
 
-        # Read the 'Findings Summary' sheet into a DataFrame
+        # Read the 'Evaluation' sheet into a DataFrame
         summary = pd.read_excel(excel_path, sheet_name='Evaluation', engine='openpyxl')
 
         # Get the column index of the 'Resources, Screen Captures, Links' column
         resources_column_index = summary.columns.get_loc('Resources, Screen Captures, Links') + 1  # +1 for openpyxl index
+
+        # Pre-aggregate remediation techniques for grouped rows
+        grouped_data = {}
+        if "Group" in summary.columns:
+            for index, row in summary.iterrows():
+                group_val = row.get("Group")
+                if pd.notna(group_val):
+                    excel_row_number = index + 2  
+                                     
+                    # Build the list of resource entries for grouped PBIs.
+                    resource_entries = []
+                    for col_index in range(resources_column_index, summary_sheet.max_column + 1):
+                        cell = summary_sheet.cell(row=excel_row_number, column=col_index)
+                        resource_text = cell.value.strip() if cell.value else None
+                        if resource_text:
+                            if cell.hyperlink:
+                                url = cell.hyperlink.target
+                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                            elif resource_text in resource_lookup:
+                                url = resource_lookup[resource_text]
+                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                            else:
+                                resource_entries.append(f'<li>{safe_html(resource_text)}</li>')
+
+                    if group_val not in grouped_data:
+                        grouped_data[group_val] = []
+                    grouped_data[group_val].append({
+                        "recommendation": safe_html(row.get("Conformance Recommendation", "")),
+                        "notes": safe_html(row.get("Notes", "")),
+                        "remediation": safe_html(row.get("Remediation Techniques", "")),
+                        "description": safe_html(row.get("Description", "")),
+                        "resources": resource_entries
+                    })
+
+
+        
+        # Dictionary to store created PBI URL for each group
+        group_pbi_map = {}
 
         # List to hold PBI URLs for writing after PBIs are created
         pbi_urls = []
@@ -155,10 +212,13 @@ def create_pbis_from_excel(excel_path, pat):
                 print(f"Skipped row {index + 2}, PBI already assigned.\n")
                 continue
 
-            # Skip rows that aren't Non-Compliant
+            # Skip rows that are Compliant
             if str(row.get('Conformance', '')).strip().lower() != "non-compliant":
-                print(f"Skipped row {index + 2}, Conformance is compliant.\n")
+                print(f"Skipped row {index + 2}\n")
                 continue
+
+            # Determine if this row is part of a group
+            group_val = row.get("Group")
 
             # Map the columns to the corresponding PBI fields
             title = f"Remediation - {page_name} - {row['Notes'][:50]}"  # Limiting title to 50 characters
@@ -166,16 +226,17 @@ def create_pbis_from_excel(excel_path, pat):
             # Escape the content to prevent HTML injection
             page_name_escaped = html.escape(page_name)
             page_url_escaped = html.escape(page_url)
-            notes_escaped = html.escape(row['Notes'])
-            recommendation_escaped = html.escape(row['Conformance Recommendation'])
-            remediation_escaped = html.escape(row['Remediation Techniques'])
-            description_escaped = html.escape(row.get('Description', "") or "")
-
-            remediation_list = f"<li>{remediation_escaped}</li>"
-            if description_escaped:
-                remediation_list += f"<li>Additional information: {description_escaped}</li>"
-
-
+            notes_escaped = safe_html(row.get('Notes', ''))
+            recommendation_escaped = safe_html(row.get('Conformance Recommendation', ''))
+            remediation_escaped = safe_html(row.get('Remediation Techniques', ''))
+            description_escaped = safe_html(row.get('Description', ''))
+           
+            # Check if this row is part of a group and render the remediation list accordingly           
+            if pd.notna(group_val):
+                remediation_list = render_grouped_remediations(grouped_data.get(group_val, []))
+            else:
+                remediation_list = render_single_remediation(remediation_escaped, description_escaped)
+            
             # Build the resources list, only adding non-empty cells (ignoring whether there's a hyperlink or not)
             resources_list = []
 
@@ -184,13 +245,26 @@ def create_pbis_from_excel(excel_path, pat):
 
             # Get the 'Resources' cell from openpyxl
             resource_cell = summary_sheet.cell(row=excel_row_number, column=resources_column_index)
+            resource_text = resource_cell.value.strip() if resource_cell.value else None
 
-            # Check if the 'Resources' cell has a value
-            if resource_cell.value:
-                resource_content = html.escape(resource_cell.value)
-                hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else "#"
-                resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
-                print(f"Added resource: {resource_content}")  # Debugging log
+            if resource_text:
+                # Case 1: Manually inserted hyperlink
+                if resource_cell.hyperlink:
+                    url = resource_cell.hyperlink.target
+                    resources_list.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                    print(f"Using manual hyperlink for '{resource_text}': {url}")
+
+                # Case 2: Lookup in DataLayer sheet
+                elif resource_text in resource_lookup:
+                    url = resource_lookup[resource_text]
+                    resources_list.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                    print(f"Resolved '{resource_text}' from DataLayer to: {url}")
+
+                # Case 3: Just text, fallback
+                else:
+                    resources_list.append(f'<li>{safe_html(resource_text)}</li>')
+                    print(f"No link found for '{resource_text}', using plain text")
+
 
             # Now check the columns beyond 'Resources' (starting from the next column)
             for col_index in range(resources_column_index + 1, summary_sheet.max_column + 1):
@@ -198,71 +272,72 @@ def create_pbis_from_excel(excel_path, pat):
 
                 # Check if the cell has a value
                 if resource_cell.value:
-                    resource_content = html.escape(resource_cell.value)
+                    resource_content = safe_html(cell.value)
                     # Check if the cell has a hyperlink; if not, use the cell's value_cell.value
                     hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else None
                     if hyperlink is not None:
                         resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
                     else:
                         resources_list.append(f'<li>{resource_content}</li>')
-                    print(f"Added resource: {resource_content}")  # Debugging log
 
             # Only generate the <ul> block if there's actual resource content
             resources_html = "".join(resources_list) if resources_list else ""
-            # Format the description with escaped content
-            description = (
-                "Please check the following (and delete this list when you're done!):"
-                "<ul>"
-                "<li>Combine any easily combine-able work into one PBI, rather than making them separate work items.</li>"
-                "<li>Please keep your PBI scope to an 8 effort or lower, if possible.</li>"
-                "<li>Check your tags! Aside from generated tags, you should add a tag for the site that was tested, e.g. WSS</li>"
-                "<li>If your PBI needs a predecessor research PBI, create one and add the tags Spike, [Page Name] Page, Ready for Refinement. Then relate it to this PBI as a Predecessor!</li>"
-                "</ul>"
-                "<h1>PBI Goal</h1>"
-                f"<p>Update the {page_name_escaped} page's [general description of component update to be made] ...<p><br />"
-                "<ul>"
-                f'<li><a href="{page_url_escaped}">Reference page</a>{testing_account_html}</li>'  # Include the testing account only if it's valid
-                f"<li>{recommendation_escaped}</li>"
-                f"<li>{notes_escaped}</li>"
-                f"<ul>{remediation_list}</ul>"
-                "<li>Resources:<ul>"
-                f"{resources_html}"
-                "</ul></li></ul><br />"
-                "<p>This change is important because [why this matters for users]</p>"
+       
+            # Build the description HTML based on whether it's a grouped row or not
+            if pd.notna(group_val):
+                description = build_grouped_description_html(
+                        page_name_escaped,
+                        page_url_escaped,
+                        testing_account_html,
+                        remediation_list
+                )
+            else:
+                description = build_description_html(
+                    page_name_escaped,
+                    page_url_escaped,
+                    testing_account_html,
+                    recommendation_escaped,
+                    notes_escaped,
+                    remediation_list,
+                    resources_html
+    )
+            # Build the acceptance criteria HTML
+            acceptance_criteria = build_acceptance_criteria_html(
+                page_url_escaped,
+                page_name_escaped
             )
 
-            acceptance_criteria = (
-                "<h2>Testing Requirements</h2>"
-                "<ul><li>Keyboard</li>"
-                "<li>Screen Reader</li>"
-                "<li>HTML</li>"
-                "<li>etc. add any other kinds of testing you might need and remove those you don't!</li></ul>"
-                "<h2>Keyboard Testing</h2>"
-                f'<ul><li>Visit the <a href="{page_url_escaped}">{page_name_escaped} page</a></li>'
-                "<li>[List testing steps]</li></ul>"
-                "<h2>Screen Reader Testing</h2>"
-                f'<ul><li>Visit the <a href="{page_url_escaped}">{page_name_escaped} page</a></li>'
-                "<li>[List testing steps]</li></ul>"
-                "<h2>HTML</h2>"
-                f'<ul><li>Visit the <a href="{page_url_escaped}">{page_name_escaped} page</a></li>'
-                "<li>[List testing steps]</li></ul>"
-            )
 
             priority = map_priority(row['Priority'])
             tags = f"Remediation,Accessibility,{page_name} Page"
 
-            # Create the PBI and get its ID
-            print(f"Creating PBI for row {index + 2}...")
-            pbi_id = create_pbi(title, description, acceptance_criteria, priority, tags, pat)
-
-            # If PBI was successfully created, write the PBI URL back to the Excel file
-            if pbi_id:
-                pbi_url = f"{ORG_URL}/_workitems/edit/{pbi_id}"
-                pbi_urls.append((index + 2, pbi_url))  # Store row index and PBI URL  # Writing back to the Excel sheet
-
-            # Link the PBI to the Parent Feature
-            if pbi_id:
-                link_pbi_to_feature(pbi_id, feature_id, pat)
+            # Process grouped rows differently
+            if pd.notna(group_val):
+                if group_val in group_pbi_map:
+                    # Already created a PBI for this group; reuse its URL
+                    pbi_url = group_pbi_map[group_val]
+                    print(f"Using existing PBI for group {group_val} at row {index+2}")
+                else:
+                    print(f"Creating grouped PBI for group {group_val} at row {index+2}...")
+                    pbi_id = create_pbi(title, description, acceptance_criteria, priority, tags, pat)
+                    if pbi_id:
+                        pbi_url = f"{ORG_URL}/_workitems/edit/{pbi_id}"
+                        group_pbi_map[group_val] = pbi_url  # Store for later reuse
+                        # Link to parent feature (only once per group)
+                        link_pbi_to_feature(pbi_id, feature_id, pat)
+                    else:
+                        pbi_url = None
+                if pbi_url:
+                    pbi_urls.append((index + 2, pbi_url))
+                else:
+                    print(f"ERROR: Failed to create PBI for grouped row {index+2}.")
+            else:
+                # Process non-grouped row normally
+                pbi_id = create_pbi(title, description, acceptance_criteria, priority, tags, pat)
+                if pbi_id:
+                    pbi_url = f"{ORG_URL}/_workitems/edit/{pbi_id}"
+                    pbi_urls.append((index + 2, pbi_url))
+                    link_pbi_to_feature(pbi_id, feature_id, pat)
 
         # Now that all PBIs are created, write PBI URLs to the Excel sheet
         for row_index, pbi_url in pbi_urls:

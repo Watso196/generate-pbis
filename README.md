@@ -9,6 +9,7 @@ This Python script automates the creation of accessibility remediation Product B
 - Generates a structured description and acceptance criteria for each PBI.
 - Automatically links created PBIs to a referenced parent feature.
 - Adds the PBI link to Remediation PBI column of your downloaded Excel file.
+- Supports "Group" column and creates grouped PBIs
 
 ## Requirements
 
@@ -79,12 +80,6 @@ python3 create.py
 3. You'll be prompted to enter the path to your downloaded Excel file. Make sure the path is valid; you will have up to three attempts.
 4. Upon successful creation of PBIs, you will see confirmation messages with the corresponding PBI IDs and PBI URLs.
 5. The script will also write the PBI URLs into the downloaded Excel file you pointed it to. You can then either upload the newly updated Excel file (just make sure it has an appropriate name), or copy the generated Remediation PBI column data into your online Excel file.
-
-### Test It Out!
-
-The folder for this script also contains a test audit file linked to a [Test Feature](https://tfs.clarkinc.biz/DefaultCollection/Design/_workitems/edit/1195637). Feel free to run this script against the provided audit file and check the feature for the created PBIs.
-
-Using this test file can also help debug issues with the script should you run into any.
 
 ## Important Notes
 
