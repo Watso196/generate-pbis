@@ -101,11 +101,15 @@ def write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url):
             remediation_pbi_column = col
             break
     
-    # If "Remediation PBI" column is found, write the PBI URL in the corresponding row and column
+    # Write the PBI URL as a clickable hyperlink
     if remediation_pbi_column:
-        summary_sheet.cell(row=row_index, column=remediation_pbi_column).value = pbi_url
+        cell = summary_sheet.cell(row=row_index, column=remediation_pbi_column)
+        cell.value = pbi_url
+        cell.hyperlink = pbi_url
+        cell.style = "Hyperlink"
     else:
         print("ERROR: 'Remediation PBI' column not found in the sheet.")
+
 
 # Helper to safely convert a value to string if needed
 # and escape HTML characters to prevent injection 
@@ -177,14 +181,11 @@ def create_pbis_from_excel(excel_path, pat):
                             if cell.hyperlink:
                                 url = cell.hyperlink.target
                                 resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
-                                print(f"[GROUPED] Using manual hyperlink for '{resource_text}': {url}")
                             elif resource_text in resource_lookup:
                                 url = resource_lookup[resource_text]
                                 resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
-                                print(f"[GROUPED] Resolved '{resource_text}' from DataLayer to: {url}")
                             else:
                                 resource_entries.append(f'<li>{safe_html(resource_text)}</li>')
-                                print(f"[GROUPED] No link found for '{resource_text}', using plain text")
 
                     if group_val not in grouped_data:
                         grouped_data[group_val] = []
@@ -213,7 +214,7 @@ def create_pbis_from_excel(excel_path, pat):
 
             # Skip rows that are Compliant
             if str(row.get('Conformance', '')).strip().lower() != "non-compliant":
-                print(f"Skipped row {index + 2}, Conformance is compliant.\n")
+                print(f"Skipped row {index + 2}\n")
                 continue
 
             # Determine if this row is part of a group
@@ -278,7 +279,6 @@ def create_pbis_from_excel(excel_path, pat):
                         resources_list.append(f'<li><a href="{hyperlink}">{resource_content}</a></li>')
                     else:
                         resources_list.append(f'<li>{resource_content}</li>')
-                    print(f"Added resource: {resource_content}")  # Debugging log
 
             # Only generate the <ul> block if there's actual resource content
             resources_html = "".join(resources_list) if resources_list else ""

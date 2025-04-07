@@ -12,6 +12,5 @@ def build_resource_lookup(workbook):
 
         if friendly_text and url:
             resource_lookup[friendly_text.strip()] = url.strip()
-            print(f"Loaded resource from DataLayer: '{friendly_text.strip()}' -> {url.strip()}")
 
     return resource_lookup
