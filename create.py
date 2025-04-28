@@ -272,7 +272,7 @@ def create_pbis_from_excel(excel_path, pat):
 
                 # Check if the cell has a value
                 if resource_cell.value:
-                    resource_content = safe_html(cell.value)
+                    resource_content = safe_html(resource_cell.value)
                     # Check if the cell has a hyperlink; if not, use the cell's value_cell.value
                     hyperlink = resource_cell.hyperlink.target if resource_cell.hyperlink else None
                     if hyperlink is not None:
