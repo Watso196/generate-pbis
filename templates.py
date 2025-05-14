@@ -39,7 +39,7 @@ def build_grouped_description_html(page_name, page_url, testing_account_html, re
         "<li>If your PBI needs a predecessor research PBI, create one and add the tags Spike, [Page Name] Page, Ready for Refinement. Then relate it to this PBI as a Predecessor!</li>"
         "</ul>"
         "<h1>PBI Goal</h1>"
-        f"<p>Update the {page_name} page's [general description of component update to be made] ...<p><br />"
+        f"<p>Update the {page_name} page's [general description of component update to be made] ...</p><br />"
         "<ul>"
         f'<li><a href="{page_url}">Reference page</a>{testing_account_html}</li>'
         f"<ul>{remediation_list}</ul>"
