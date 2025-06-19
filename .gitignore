@@ -2,3 +2,6 @@
 .DS_Store
 test.xlsx
 copy.xlsx
+
+__pycache__/
+venv/
