@@ -4,6 +4,7 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 import openpyxl
 import html 
+import re
 import os
 import truststore
 from templates import (
@@ -11,7 +12,10 @@ from templates import (
     build_grouped_description_html,
     build_acceptance_criteria_html,
     render_grouped_remediations,
-    render_single_remediation
+    render_single_remediation,
+    build_custom_ac_list,
+    build_custom_ac_paragraph,
+    build_grouped_acceptance_criteria_html
 )
 from resource_lookup import build_resource_lookup
 
@@ -116,6 +120,27 @@ def write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url):
 def safe_html(val):
     return html.escape(str(val)) if pd.notna(val) else ""
 
+def format_custom_ac(raw_text):
+    # Converts raw Acceptance Criteria text into styled HTML.
+    # If the text appears to contain numbered items like '1. Step one 2. Step two',
+    # it will split them into an unordered <ul> list.
+    # Otherwise, it will wrap the text in a <p>.
+    
+    # Split on patterns like '1. ', '2. ', etc.
+    potential_items = re.split(r'\d+\.\s*', raw_text)
+    cleaned_items = [item.strip() for item in potential_items if item.strip()]
+
+    # Decide whether to render as list or paragraph
+    if len(cleaned_items) > 1:
+        # Build list items
+        list_items_html = "".join(
+            f"<li>{html.escape(item)}</li>" for item in cleaned_items
+        )
+        return build_custom_ac_list(list_items_html)
+    else:
+        # Just a single paragraph
+        return build_custom_ac_paragraph(html.escape(raw_text))
+
 # Main function to read the Excel file and create PBIs
 def create_pbis_from_excel(excel_path, pat):
     try:
@@ -163,6 +188,32 @@ def create_pbis_from_excel(excel_path, pat):
 
         # Get the column index of the 'Resources, Screen Captures, Links' column
         resources_column_index = summary.columns.get_loc('Resources, Screen Captures, Links') + 1  # +1 for openpyxl index
+    
+        # 1) Load the whole DataLayer sheet into memory
+        data_layer_sheet = pd.read_excel(
+            excel_path,
+            sheet_name="DataLayer",
+            engine="openpyxl",
+            dtype=str
+        )
+        # 2) Clean up the Acceptance Criteria column and drop truly empty rows
+        data_layer_sheet["Acceptance Criteria"] = (
+            data_layer_sheet["Acceptance Criteria"]
+            .fillna("")       # replace NaN with empty string
+            .str.strip()      # trim whitespace
+        )
+        # Keep only rows that actually have AC text
+        rows_with_custom_ac = data_layer_sheet[
+            data_layer_sheet["Acceptance Criteria"] != ""
+        ]
+
+        # 3) Build a lookup so we can quickly find AC by (Notes, Remediation) key
+        acceptance_criteria_lookup: dict[tuple[str,str], str] = {}
+        for _, row in rows_with_custom_ac.iterrows():
+            notes_key       = row["Notes"].strip()
+            remediation_key = row["Remediation Techniques"].strip()
+            ac_text         = row["Acceptance Criteria"]
+            acceptance_criteria_lookup[(notes_key, remediation_key)] = ac_text
 
         # Pre-aggregate remediation techniques for grouped rows
         grouped_data = {}
@@ -187,14 +238,21 @@ def create_pbis_from_excel(excel_path, pat):
                             else:
                                 resource_entries.append(f'<li>{safe_html(resource_text)}</li>')
 
+                    # Look up custom AC for this row
+                    ac_text = acceptance_criteria_lookup.get(
+                        (str(row.get("Notes", "")).strip(), str(row.get("Remediation Techniques", "")).strip())
+                    )
                     if group_val not in grouped_data:
                         grouped_data[group_val] = []
+
+                     # Append entry with AC included    
                     grouped_data[group_val].append({
                         "recommendation": safe_html(row.get("Conformance Recommendation", "")),
                         "notes": safe_html(row.get("Notes", "")),
                         "remediation": safe_html(row.get("Remediation Techniques", "")),
                         "description": safe_html(row.get("Description", "")),
-                        "resources": resource_entries
+                        "resources": resource_entries,
+                        "ac": ac_text
                     })
 
 
@@ -300,12 +358,27 @@ def create_pbis_from_excel(excel_path, pat):
                     notes_escaped,
                     remediation_list,
                     resources_html
-    )
-            # Build the acceptance criteria HTML
-            acceptance_criteria = build_acceptance_criteria_html(
-                page_url_escaped,
-                page_name_escaped
-            )
+        )
+         
+            # CUSTOM vs DEFAULT Acceptance Criteria
+            if pd.notna(group_val):
+                # For grouped PBIs, build an ordered list of all ACs
+                acceptance_criteria = build_grouped_acceptance_criteria_html(
+                    grouped_data.get(group_val, []),
+                    format_custom_ac
+                )
+            else:
+                # For non-grouped PBIs, use single-item logic
+                note = str(row.get("Notes", "")).strip()
+                rem  = str(row.get("Remediation Techniques", "")).strip()
+                raw_ac = acceptance_criteria_lookup.get((note, rem))
+                if raw_ac:
+                    acceptance_criteria = format_custom_ac(raw_ac)
+                else:
+                    acceptance_criteria = build_acceptance_criteria_html(
+                        page_url_escaped,
+                        page_name_escaped
+                    )
 
 
             priority = map_priority(row['Priority'])

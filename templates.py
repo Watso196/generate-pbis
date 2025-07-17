@@ -31,13 +31,6 @@ def render_single_remediation(remediation, description=""):
 #for grouped PBIs
 def build_grouped_description_html(page_name, page_url, testing_account_html, remediation_list):
     return (
-        "Please check the following (and delete this list when you're done!):"
-        "<ul>"
-        "<li>Combine any easily combine-able work into one PBI, rather than making them separate work items.</li>"
-        "<li>Please keep your PBI scope to an 8 effort or lower, if possible.</li>"
-        "<li>Check your tags! Aside from generated tags, you should add a tag for the site that was tested, e.g. WSS</li>"
-        "<li>If your PBI needs a predecessor research PBI, create one and add the tags Spike, [Page Name] Page, Ready for Refinement. Then relate it to this PBI as a Predecessor!</li>"
-        "</ul>"
         "<h1>PBI Goal</h1>"
         f"<p>Update the {page_name} page's [general description of component update to be made] ...</p><br />"
         "<ul>"
@@ -63,7 +56,7 @@ def render_grouped_remediations(group_entries):
     return html
 
 
-#AC is used for both single-item and grouped PBIs currently 
+#default acceptance criteria for non-custom AC items 
 def build_acceptance_criteria_html(page_url, page_name):
     return (
         "<h2>Testing Requirements</h2>"
@@ -81,3 +74,34 @@ def build_acceptance_criteria_html(page_url, page_name):
         f'<ul><li>Visit the <a href="{page_url}">{page_name} page</a></li>'
         "<li>[List testing steps]</li></ul>"
     )
+
+# Wraps multiple acceptance criteria items in a <ul> with a heading.
+def build_custom_ac_list(list_items_html):
+    return (
+        f"<h2>Testing Requirements</h2>"
+        f"<ul>{list_items_html}</ul>"    
+    )
+
+# Wraps a single acceptance criteria item in a <p> with a heading.
+def build_custom_ac_paragraph(text_html):
+    return (
+        f"<h2>Testing Requirements</h2>"
+        f"<p>{text_html}</p>"
+    )
+
+# For grouped custom AC
+def build_grouped_acceptance_criteria_html(group_entries, formatter_fn):
+    # Build an ordered list of acceptance criteria, one for each group entry.
+    html = "<h2>Testing Requirements</h2><ol>"
+    for entry in group_entries:
+        ac_text = entry.get("ac")
+        if ac_text:
+            # Use the provided formatter, strip outer heading if necessary
+            inner_html = formatter_fn(ac_text)
+            # remove the outer heading to avoid repeating <h2> inside each item
+            inner_html = inner_html.replace("<h2>Testing Requirements</h2>", "")
+            html += f"<li>{inner_html}</li>"
+        else:
+            html += "<li>Follow default testing methods (Keyboard, Screen Reader, etc.)</li>"
+    html += "</ol>"
+    return html
