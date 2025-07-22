@@ -75,33 +75,46 @@ def build_acceptance_criteria_html(page_url, page_name):
         "<li>[List testing steps]</li></ul>"
     )
 
-# Wraps multiple acceptance criteria items in a <ul> with a heading.
-def build_custom_ac_list(list_items_html):
+# Wraps multiple acceptance criteria steps in a <ul> with a heading.
+def build_custom_acceptance_criteria_list(list_items_html):
     return (
         f"<h2>Testing Requirements</h2>"
         f"<ul>{list_items_html}</ul>"    
     )
 
 # Wraps a single acceptance criteria item in a <p> with a heading.
-def build_custom_ac_paragraph(text_html):
+def build_custom_acceptance_criteria_paragraph(text_html):
     return (
         f"<h2>Testing Requirements</h2>"
         f"<p>{text_html}</p>"
     )
 
-# For grouped custom AC
+# For grouped custom acceptance criteria
 def build_grouped_acceptance_criteria_html(group_entries, formatter_fn):
-    # Build an ordered list of acceptance criteria, one for each group entry.
-    html = "<h2>Testing Requirements</h2><ol>"
+    # Intro and key
+    html = (
+        "<h2>Testing Requirements</h2>"
+        "<p><em>Each numbered item below corresponds to the same numbered item "
+        "in the Description section above.</em></p>"
+        "<ol>"
+    )
+
+    # Loop through each grouped entry
     for entry in group_entries:
-        ac_text = entry.get("ac")
-        if ac_text:
-            # Use the provided formatter, strip outer heading if necessary
-            inner_html = formatter_fn(ac_text)
-            # remove the outer heading to avoid repeating <h2> inside each item
+        acceptance_criteria_text = entry.get("acceptance_criteria")
+        if acceptance_criteria_text and acceptance_criteria_text.strip():
+            # Format custom acceptance criteria
+            inner_html = formatter_fn(acceptance_criteria_text)
+            # Strip extra heading if present
             inner_html = inner_html.replace("<h2>Testing Requirements</h2>", "")
             html += f"<li>{inner_html}</li>"
         else:
-            html += "<li>Follow default testing methods (Keyboard, Screen Reader, etc.)</li>"
+            # No custom AC - show todo placeholder with bullet style to match custom acceptance criteria
+            html += (
+                "<li><ul><li>"
+                "<strong>TODO</strong>: [ENTER CUSTOM TESTING REQUIREMENTS FOR THIS DESCRIPTION ITEM]"
+                "</li></ul></li>"
+            )
+
     html += "</ol>"
     return html
