@@ -7,6 +7,8 @@ import html
 import re
 import os
 import truststore
+from helpers import safe_html, format_custom_acceptance_criteria, build_resource_lookup
+
 from templates import (
     build_description_html,
     build_grouped_description_html,
@@ -17,8 +19,6 @@ from templates import (
     build_custom_acceptance_criteria_paragraph,
     build_grouped_acceptance_criteria_html
 )
-from resource_lookup import build_resource_lookup
-
 
 truststore.inject_into_ssl()
 
@@ -114,49 +114,6 @@ def write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url):
     else:
         print("ERROR: 'Remediation PBI' column not found in the sheet.")
 
-
-# Helper to safely convert a value to string if needed
-# and escape HTML characters to prevent injection 
-def safe_html(val):
-    return html.escape(str(val)) if pd.notna(val) else ""
-
-def format_custom_acceptance_criteria(raw_text):
-    # Converts raw Acceptance Criteria text into styled HTML.
-    # Splits on '1. ', '2. ', etc. for main items.
-    # Then inside each main item, splits on '*' optionally followed by a space for sub‑bullets.
-    # Otherwise, wraps the whole thing in a <p>.
-
-    # 1) Break into main numbered items
-    potential_items = re.split(r'\d+\.\s*', raw_text)
-    cleaned_items   = [item.strip() for item in potential_items if item.strip()]
-
-    if len(cleaned_items) > 1:
-        list_items_html = ""
-
-        for main_item in cleaned_items:
-            # 2) Split out any "*sub‑bullet" segments
-            asterisk_items = re.split(r'\*\s*', main_item)
-            main_line = asterisk_items[0].strip()
-            sub_items = [asterisk_item.strip() for asterisk_item in asterisk_items[1:] if asterisk_item.strip()]
-
-            if sub_items:
-                # Build nested UL
-                sub_html = "".join(f"<li>{html.escape(sub_item)}</li>" for sub_item in sub_items)
-                list_items_html += (
-                    f"<li>{html.escape(main_line)}"
-                    f"<ul>{sub_html}</ul>"
-                    "</li>"
-                )
-            else:
-                # No sub‑bullets, just render the whole thing
-                list_items_html += f"<li>{html.escape(main_item)}</li>"
-
-        return build_custom_acceptance_criteria_list(list_items_html)
-    else:
-        # Single item -> paragraph
-        return build_custom_acceptance_criteria_paragraph(html.escape(raw_text))
-
-
 # Main function to read the Excel file and create PBIs
 def create_pbis_from_excel(excel_path, pat):
     try:
@@ -219,13 +176,13 @@ def create_pbis_from_excel(excel_path, pat):
             .str.strip()      # trim whitespace
         )
         # Keep only rows that actually have AC text
-        rows_with_custom_ac = data_layer_sheet[
+        rows_with_custom_acceptance_criteria = data_layer_sheet[
             data_layer_sheet["Acceptance Criteria"] != ""
         ]
 
         # 3) Build a lookup so we can quickly find AC by (Notes, Remediation) key
         acceptance_criteria_lookup: dict[tuple[str,str], str] = {}
-        for _, row in rows_with_custom_ac.iterrows():
+        for _, row in rows_with_custom_acceptance_criteria.iterrows():
             notes_key       = row["Notes"].strip()
             remediation_key = row["Remediation Techniques"].strip()
             acceptance_criteria_text = row["Acceptance Criteria"]
