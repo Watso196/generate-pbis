@@ -102,19 +102,21 @@ def build_grouped_acceptance_criteria_html(group_entries, formatter_fn):
     # Loop through each grouped entry
     for entry in group_entries:
         acceptance_criteria_text = entry.get("acceptance_criteria")
+        ac_link = entry.get("acceptance_criteria_link")
         if acceptance_criteria_text and acceptance_criteria_text.strip():
-            # Format custom acceptance criteria
             inner_html = formatter_fn(acceptance_criteria_text)
-            # Strip extra heading if present
             inner_html = inner_html.replace("<h2>Testing Requirements</h2>", "")
+            # Append Reference link if available
+            if ac_link:
+                inner_html += f'<p>Reference: <a href="{ac_link}">{ac_link}</a></p>'
             html += f"<li>{inner_html}</li>"
         else:
-            # No custom AC - show todo placeholder with bullet style to match custom acceptance criteria
             html += (
                 "<li><ul><li>"
                 "<strong>TODO</strong>: [ENTER CUSTOM TESTING REQUIREMENTS FOR THIS DESCRIPTION ITEM]"
                 "</li></ul></li>"
             )
+
 
     html += "</ol>"
     return html
