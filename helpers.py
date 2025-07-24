@@ -8,7 +8,7 @@ def safe_html(val):
     return html.escape(str(val)) if pd.notna(val) else ""
 
 
-def format_custom_acceptance_criteria(raw_text):
+def format_custom_acceptance_criteria(raw_text, page_url, testing_account_html):
     # Converts raw Acceptance Criteria text into styled HTML.
     # Splits on '1. ', '2. ', etc. for main items.
     # Then inside each main item, splits on '*' optionally for sub‑bullets.
@@ -40,11 +40,13 @@ def format_custom_acceptance_criteria(raw_text):
                 list_items_html += f"<li>{html.escape(main_item)}</li>"
 
         from templates import build_custom_acceptance_criteria_list
-        return build_custom_acceptance_criteria_list(list_items_html)
+        # Pass page_url and testing_account_html so the builder can prepend the visit link
+        return build_custom_acceptance_criteria_list(list_items_html, page_url, testing_account_html)
     else:
-        # Single item -> paragraph
+        # Single item -> fallback to paragraph
         from templates import build_custom_acceptance_criteria_paragraph
-        return build_custom_acceptance_criteria_paragraph(html.escape(raw_text))
+        # Pass page_url and testing_account_html so the builder can prepend the visit link
+        return build_custom_acceptance_criteria_paragraph(html.escape(raw_text), page_url, testing_account_html)
 
 
 def build_resource_lookup(workbook):

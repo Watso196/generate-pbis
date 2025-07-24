@@ -76,47 +76,64 @@ def build_acceptance_criteria_html(page_url, page_name):
     )
 
 # Wraps multiple acceptance criteria steps in a <ul> with a heading.
-def build_custom_acceptance_criteria_list(list_items_html):
+def build_custom_acceptance_criteria_list(list_items_html, page_url, testing_account_html):
+    # Always prepend the "Visit testing page" item
     return (
         f"<h2>Testing Requirements</h2>"
-        f"<ul>{list_items_html}</ul>"    
+        "<ul>"
+        f'<li>Visit <a href="{page_url}">testing page</a>{testing_account_html}</li>'
+        f"{list_items_html}"
+        "</ul>"
     )
 
 # Wraps a single acceptance criteria item in a <p> with a heading.
-def build_custom_acceptance_criteria_paragraph(text_html):
+def build_custom_acceptance_criteria_paragraph(text_html, page_url, testing_account_html):
+    # Always prepend the "Visit testing page" item even for a single AC
     return (
         f"<h2>Testing Requirements</h2>"
-        f"<p>{text_html}</p>"
+        "<ul>"
+        f'<li>Visit <a href="{page_url}">testing page</a>{testing_account_html}</li>'
+        f"<li>{text_html}</li>"
+        "</ul>"
     )
 
+
 # For grouped custom acceptance criteria
-def build_grouped_acceptance_criteria_html(group_entries, formatter_fn):
+def build_grouped_acceptance_criteria_html(group_entries, formatter_fn, page_url, testing_account_html):
     # Intro and key
     html = (
         "<h2>Testing Requirements</h2>"
-        "<p><em>Each numbered item below corresponds to the same numbered item "
+        "<p><em>Each item below corresponds to the same numbered item "
         "in the Description section above.</em></p>"
-        "<ol>"
     )
 
     # Loop through each grouped entry
-    for entry in group_entries:
+    for index, entry in enumerate(group_entries, start=1):
         acceptance_criteria_text = entry.get("acceptance_criteria")
-        ac_link = entry.get("acceptance_criteria_link")
+        acceptance_criteria_link = entry.get("acceptance_criteria_link")
+
+        # Item header
+        html += f"<h3>Item {index}</h3>"
+
         if acceptance_criteria_text and acceptance_criteria_text.strip():
-            inner_html = formatter_fn(acceptance_criteria_text)
-            inner_html = inner_html.replace("<h2>Testing Requirements</h2>", "")
+            # Now we pass page_url and testing_account_html
+            formatted_acceptance_criteria = formatter_fn(
+                acceptance_criteria_text,
+                page_url,
+                testing_account_html
+            )
+            formatted_acceptance_criteria = formatted_acceptance_criteria.replace("<h2>Testing Requirements</h2>", "")
+
             # Append Reference link if available
-            if ac_link:
-                inner_html += f'<p>Reference: <a href="{ac_link}">{ac_link}</a></p>'
-            html += f"<li>{inner_html}</li>"
+            if acceptance_criteria_link:
+                formatted_acceptance_criteria += (
+                    f'<p>Reference: <a href="{acceptance_criteria_link}">{acceptance_criteria_link}</a></p>'
+                )
+
+            html += formatted_acceptance_criteria
         else:
             html += (
-                "<li><ul><li>"
-                "<strong>TODO</strong>: [ENTER CUSTOM TESTING REQUIREMENTS FOR THIS DESCRIPTION ITEM]"
-                "</li></ul></li>"
+                "<p><strong>TODO</strong>: [ENTER CUSTOM TESTING REQUIREMENTS FOR THIS DESCRIPTION ITEM]</p>"
             )
 
-
-    html += "</ol>"
     return html

@@ -227,11 +227,11 @@ def create_pbis_from_excel(excel_path, pat):
                     # Look up custom acceptance criteria for this row
                     notes_key = str(row.get("Notes", "")).strip()
                     remediation_key = str(row.get("Remediation Techniques", "")).strip()
-                    ac_entry = acceptance_criteria_lookup.get((notes_key, remediation_key))
+                    acceptance_criteria_entry = acceptance_criteria_lookup.get((notes_key, remediation_key))
 
                     # Safely extract text and link from lookup
-                    ac_text = ac_entry["text"] if ac_entry else None
-                    ac_link = ac_entry["reference_link"] if ac_entry else None
+                    acceptance_criteria_text = acceptance_criteria_entry["text"] if acceptance_criteria_entry else None
+                    acceptance_criteria_link = acceptance_criteria_entry["reference_link"] if acceptance_criteria_entry else None
 
                     # Append entry with both AC text and link
                     if group_val not in grouped_data:
@@ -243,8 +243,8 @@ def create_pbis_from_excel(excel_path, pat):
                         "remediation": safe_html(row.get("Remediation Techniques", "")),
                         "description": safe_html(row.get("Description", "")),
                         "resources": resource_entries,
-                        "acceptance_criteria": ac_text,
-                        "acceptance_criteria_link": ac_link
+                        "acceptance_criteria": acceptance_criteria_text,
+                        "acceptance_criteria_link": acceptance_criteria_link
                     })
         
         # Dictionary to store created PBI URL for each group
@@ -355,20 +355,22 @@ def create_pbis_from_excel(excel_path, pat):
                 # For grouped PBIs, build an ordered list of all ACs
                 acceptance_criteria = build_grouped_acceptance_criteria_html(
                     grouped_data.get(group_val, []),
-                    format_custom_acceptance_criteria
+                    format_custom_acceptance_criteria,
+                    page_url_escaped,
+                    testing_account_html
                 )
             else:
                 # For non-grouped PBIs, use single-item logic
                 note = str(row.get("Notes", "")).strip()
                 rem  = str(row.get("Remediation Techniques", "")).strip()
-                ac_entry = acceptance_criteria_lookup.get((note, rem))
-                if ac_entry:
-                    raw_acceptance_criteria = ac_entry["text"]
-                    ref_link = ac_entry["reference_link"]
-                    acceptance_criteria = format_custom_acceptance_criteria(raw_acceptance_criteria)
+                acceptance_criteria_entry = acceptance_criteria_lookup.get((note, rem))
+                if acceptance_criteria_entry:
+                    raw_acceptance_criteria = acceptance_criteria_entry["text"]
+                    ref_link = acceptance_criteria_entry["reference_link"]
+                    acceptance_criteria = format_custom_acceptance_criteria(raw_acceptance_criteria, page_url_escaped, testing_account_html)
                     # Append Reference link if available
                     if ref_link:
-                        acceptance_criteria += f'<p>Reference: <a href="{safe_html(ref_link)}">{safe_html(ref_link)}</a></p>'
+                        acceptance_criteria += f'<p><strong>Reference:</strong> <a href="{safe_html(ref_link)}">{safe_html(ref_link)}</a></p>'
                 else:
                     acceptance_criteria = build_acceptance_criteria_html(
                         page_url_escaped,
