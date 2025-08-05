@@ -1,4 +1,5 @@
-#for single-item PBIs
+from helpers import safe_html
+
 def build_description_html(page_name, page_url, testing_account_html, recommendation, notes, remediation_list, resources_html):
     return (
         "Please check the following (and delete this list when you're done!):"
@@ -101,7 +102,7 @@ def build_custom_acceptance_criteria_paragraph(text_html, page_url, testing_acco
 # For grouped custom acceptance criteria
 def build_grouped_acceptance_criteria_html(group_entries, formatter_fn, page_url, testing_account_html):
     # Intro and key
-    html = (
+    output = (
         "<h2>Testing Requirements</h2>"
         "<p><em>Each item below corresponds to the same numbered item "
         "in the Description section above.</em></p>"
@@ -113,27 +114,34 @@ def build_grouped_acceptance_criteria_html(group_entries, formatter_fn, page_url
         acceptance_criteria_link = entry.get("acceptance_criteria_link")
 
         # Item header
-        html += f"<h3>Item {index}</h3>"
+        output += f"<h3>Item {index}</h3>"
 
         if acceptance_criteria_text and acceptance_criteria_text.strip():
-            # Now we pass page_url and testing_account_html
-            formatted_acceptance_criteria = formatter_fn(
+            # format the custom AC
+            formatted = formatter_fn(
                 acceptance_criteria_text,
                 page_url,
                 testing_account_html
             )
-            formatted_acceptance_criteria = formatted_acceptance_criteria.replace("<h2>Testing Requirements</h2>", "")
+            # strip the extra heading
+            formatted = formatted.replace("<h2>Testing Requirements</h2>", "")
 
             # Append Reference link if available
             if acceptance_criteria_link:
-                formatted_acceptance_criteria += (
-                    f'<p>Reference: <a href="{acceptance_criteria_link}">{acceptance_criteria_link}</a></p>'
+                # choose friendly name or fall back to the URL
+                ref_name    = entry.get("acceptance_criteria_name")
+                display_txt = safe_html(ref_name) if ref_name else safe_html(acceptance_criteria_link)
+
+                formatted += (
+                    f'<p>Reference: '
+                    f'<a href="{safe_html(acceptance_criteria_link)}">'
+                    f'{display_txt}</a></p>'
                 )
 
-            html += formatted_acceptance_criteria
+            output += formatted
         else:
-            html += (
+            output += (
                 "<p><strong>TODO</strong>: [ENTER CUSTOM TESTING REQUIREMENTS FOR THIS DESCRIPTION ITEM]</p>"
             )
 
-    return html
+    return output

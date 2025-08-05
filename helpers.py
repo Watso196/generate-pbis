@@ -7,10 +7,6 @@ def safe_html(val):
     # Safely convert a value to string if needed and escape HTML characters to prevent injection.
     return html.escape(str(val)) if pd.notna(val) else ""
 
-
-import re
-import html
-
 def format_custom_acceptance_criteria(raw_text, page_url, testing_account_html):
     # Converts raw Acceptance Criteria text into styled HTML.
     # Splits on '1. ', '2. ', etc. for main items.

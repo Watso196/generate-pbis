@@ -184,21 +184,32 @@ def create_pbis_from_excel(excel_path, pat):
         #    Now we also store an optional "AC Reference Link" if present.
         acceptance_criteria_lookup: dict[tuple[str, str], dict] = {}
         for _, row in rows_with_custom_acceptance_criteria.iterrows():
-            notes_key = str(row["Notes"]).strip()
+            notes_key       = str(row["Notes"]).strip()
             remediation_key = str(row["Remediation Techniques"]).strip()
 
-            acceptance_criteria_text = row.get("Acceptance Criteria", "")
-            ac_reference_link = row.get("AC Reference Link")
+            # pull the custom AC text itself
+            acceptance_criteria_text = row.get("Acceptance Criteria", "").strip()
 
+            # read your two new columns
+            ac_reference_link = row.get("AC Reference Link (full or minified URL)")
+            ac_reference_name = row.get("AC Reference Name (friendly text)")
+
+            # normalize link
             if pd.notna(ac_reference_link):
                 ac_reference_link = ac_reference_link.strip()
             else:
                 ac_reference_link = None
 
-            # Store as a dictionary with both text and link
+            # normalize friendly text
+            if pd.notna(ac_reference_name):
+                ac_reference_name = ac_reference_name.strip()
+            else:
+                ac_reference_name = None
+
             acceptance_criteria_lookup[(notes_key, remediation_key)] = {
-                "text": acceptance_criteria_text,
-                "reference_link": ac_reference_link
+                "text":            acceptance_criteria_text,
+                "reference_link":  ac_reference_link,
+                "reference_name":  ac_reference_name
             }
 
         # Pre-aggregate remediation techniques for grouped rows
@@ -229,9 +240,12 @@ def create_pbis_from_excel(excel_path, pat):
                     remediation_key = str(row.get("Remediation Techniques", "")).strip()
                     acceptance_criteria_entry = acceptance_criteria_lookup.get((notes_key, remediation_key))
 
+                    entry = acceptance_criteria_lookup.get((notes_key, remediation_key), {})
+
                     # Safely extract text and link from lookup
-                    acceptance_criteria_text = acceptance_criteria_entry["text"] if acceptance_criteria_entry else None
-                    acceptance_criteria_link = acceptance_criteria_entry["reference_link"] if acceptance_criteria_entry else None
+                    acceptance_criteria_text = entry.get("text")
+                    acceptance_criteria_link = entry.get("reference_link")
+                    acceptance_criteria_name = entry.get("reference_name")
 
                     # Append entry with both AC text and link
                     if group_val not in grouped_data:
@@ -244,7 +258,8 @@ def create_pbis_from_excel(excel_path, pat):
                         "description": safe_html(row.get("Description", "")),
                         "resources": resource_entries,
                         "acceptance_criteria": acceptance_criteria_text,
-                        "acceptance_criteria_link": acceptance_criteria_link
+                        "acceptance_criteria_link": acceptance_criteria_link,
+                        "acceptance_criteria_name": acceptance_criteria_name
                     })
         
         # Dictionary to store created PBI URL for each group
@@ -363,15 +378,30 @@ def create_pbis_from_excel(excel_path, pat):
                 # For non-grouped PBIs, use single-item logic
                 note = str(row.get("Notes", "")).strip()
                 rem  = str(row.get("Remediation Techniques", "")).strip()
-                acceptance_criteria_entry = acceptance_criteria_lookup.get((note, rem))
-                if acceptance_criteria_entry:
-                    raw_acceptance_criteria = acceptance_criteria_entry["text"]
-                    ref_link = acceptance_criteria_entry["reference_link"]
-                    acceptance_criteria = format_custom_acceptance_criteria(raw_acceptance_criteria, page_url_escaped, testing_account_html)
-                    # Append Reference link if available
+
+                # pull our lookup entry (or {} if missing)
+                entry = acceptance_criteria_lookup.get((note, rem), {})
+
+                raw_acceptance_criteria = entry.get("text")
+                if raw_acceptance_criteria:
+                    # build the custom AC
+                    acceptance_criteria = format_custom_acceptance_criteria(
+                        raw_acceptance_criteria,
+                        page_url_escaped,
+                        testing_account_html
+                    )
+
+                    # now append Reference link + friendly name if present
+                    ref_link = entry.get("reference_link")
                     if ref_link:
-                        acceptance_criteria += f'<p><strong>Reference:</strong> <a href="{safe_html(ref_link)}">{safe_html(ref_link)}</a></p>'
+                        ref_name  = entry.get("reference_name")
+                        link_text = safe_html(ref_name) if ref_name else safe_html(ref_link)
+                        acceptance_criteria += (
+                            f'<p><strong>Reference:</strong> '
+                            f'<a href="{safe_html(ref_link)}">{link_text}</a></p>'
+                        )
                 else:
+                    # fall back to default AC
                     acceptance_criteria = build_acceptance_criteria_html(
                         page_url_escaped,
                         page_name_escaped
