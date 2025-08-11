@@ -22,9 +22,20 @@ This Python script automates the creation of accessibility remediation Product B
 1. **Install python3 using npm**: `npm i python3` (see [npm docs](https://www.npmjs.com/package/python3))
 2. **Clone this repo**.
 3. **Install the required Python libraries** using pip3:
+
    ```
-   pip3 install pandas openpyxl requests
+   pip3 install pandas openpyxl requests truststore
    ```
+
+   You may need to use a virtual environment to install these Python libraries:
+
+   ```
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install [python-library]
+   ```
+
+   To run the viertual environment, run `venv/bin/activate`.
 
 ## Environment Variables
 
