@@ -228,18 +228,20 @@ def create_pbis_from_excel(excel_path, pat):
                         if resource_text:
                             if cell.hyperlink:
                                 url = cell.hyperlink.target
-                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                                resource_entries.append(f'<a href="{safe_html(url)}">{safe_html(resource_text)}</a>')
                             elif resource_text in resource_lookup:
                                 url = resource_lookup[resource_text]
-                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                                resource_entries.append(f'<a href="{safe_html(url)}">{safe_html(resource_text)}</a>')
                             else:
-                                resource_entries.append(f'<li>{safe_html(resource_text)}</li>')
+                                # plain text fragment (no <li>)
+                                trimmed = (resource_text or "").strip()
+                                if trimmed:  # skip whitespace-only cells
+                                    resource_entries.append(safe_html(trimmed))
 
                     # Look up custom acceptance criteria for this row
                     notes_key = str(row.get("Notes", "")).strip()
                     remediation_key = str(row.get("Remediation Techniques", "")).strip()
-                    acceptance_criteria_entry = acceptance_criteria_lookup.get((notes_key, remediation_key))
-
+                    
                     entry = acceptance_criteria_lookup.get((notes_key, remediation_key), {})
 
                     # Safely extract text and link from lookup

@@ -30,31 +30,44 @@ def render_single_remediation(remediation, description=""):
 
 
 #for grouped PBIs
-def build_grouped_description_html(page_name, page_url, testing_account_html, remediation_list):
+def build_grouped_description_html(page_name, page_url, testing_account_html, remediation_list_html):
     return (
         "<h1>PBI Goal</h1>"
         f"<p>Update the {page_name} page's [general description of component update to be made] ...</p><br />"
-        "<ul>"
-        f'<li><a href="{page_url}">Reference page</a>{testing_account_html}</li>'
-        f"<ul>{remediation_list}</ul>"
-        "</ul><br />"
+        f'<p><a href="{page_url}">Reference page</a>{testing_account_html}</p>'
+        f"{remediation_list_html}"
+        "<br />"
         "<p>These changes are important because [why this matters for users]</p>"
     )
 
-def render_grouped_remediations(group_entries):
-    html = "<ol>"
-    for entry in group_entries:
-        html += "<li>"
-        html += f"<strong>Conformance Recommendation:</strong> {entry['recommendation']}<br>"
-        html += f"<strong>Notes:</strong> {entry['notes']}<br>"
-        html += f"<strong>Remediation:</strong> {entry['remediation']}<br>"
-        if entry.get("description"):
-            html += f"<strong>Additional Information:</strong> {entry['description']}<br>"
-        if entry.get("resources"):
-            html += "<strong>Resources:</strong><ul>" + "".join(entry["resources"]) + "</ul>"
-        html += "</li>"
-    html += "</ol>"
-    return html
+def render_grouped_remediations(grouped_remediation_entries):
+    # Render grouped Description items as "Item 1", "Item 2"
+    html_output = ""
+    for item_index, remediation_entry in enumerate(grouped_remediation_entries, start=1):
+        html_output += f"<h3>Item {item_index}</h3>"
+        html_output += "<ul>"
+
+        if remediation_entry.get("recommendation"):
+            html_output += f"<li><strong>Conformance Recommendation:</strong> {remediation_entry['recommendation']}</li>"
+
+        if remediation_entry.get("notes"):
+            html_output += f"<li><strong>Notes:</strong> {remediation_entry['notes']}</li>"
+
+        if remediation_entry.get("remediation"):
+            html_output += f"<li><strong>Remediation:</strong> {remediation_entry['remediation']}</li>"
+
+        if remediation_entry.get("description"):
+            html_output += f"<li><strong>Additional Information:</strong> {remediation_entry['description']}</li>"
+
+        if remediation_entry.get("resources"):
+            html_output += "<li><strong>Resources:</strong><ul>"
+            for resource_item in remediation_entry["resources"]:
+                html_output += f"<li>{resource_item}</li>"
+            html_output += "</ul></li>"
+
+        html_output += "</ul>"
+
+    return html_output
 
 
 #default acceptance criteria for non-custom AC items 
