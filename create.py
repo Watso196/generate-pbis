@@ -4,17 +4,21 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 import openpyxl
 import html 
+import re
 import os
 import truststore
+from helpers import safe_html, format_custom_acceptance_criteria, build_resource_lookup
+
 from templates import (
     build_description_html,
     build_grouped_description_html,
     build_acceptance_criteria_html,
     render_grouped_remediations,
-    render_single_remediation
+    render_single_remediation,
+    build_custom_acceptance_criteria_list,
+    build_custom_acceptance_criteria_paragraph,
+    build_grouped_acceptance_criteria_html
 )
-from resource_lookup import build_resource_lookup
-
 
 truststore.inject_into_ssl()
 
@@ -110,12 +114,6 @@ def write_pbi_url_to_excel(workbook, summary_sheet, row_index, pbi_url):
     else:
         print("ERROR: 'Remediation PBI' column not found in the sheet.")
 
-
-# Helper to safely convert a value to string if needed
-# and escape HTML characters to prevent injection 
-def safe_html(val):
-    return html.escape(str(val)) if pd.notna(val) else ""
-
 # Main function to read the Excel file and create PBIs
 def create_pbis_from_excel(excel_path, pat):
     try:
@@ -163,6 +161,56 @@ def create_pbis_from_excel(excel_path, pat):
 
         # Get the column index of the 'Resources, Screen Captures, Links' column
         resources_column_index = summary.columns.get_loc('Resources, Screen Captures, Links') + 1  # +1 for openpyxl index
+    
+        # 1) Load the whole DataLayer sheet into memory
+        data_layer_sheet = pd.read_excel(
+            excel_path,
+            sheet_name="DataLayer",
+            engine="openpyxl",
+            dtype=str
+        )
+        # 2) Clean up the Acceptance Criteria column and drop truly empty rows
+        data_layer_sheet["Acceptance Criteria"] = (
+            data_layer_sheet["Acceptance Criteria"]
+            .fillna("")       # replace NaN with empty string
+            .str.strip()      # trim whitespace
+        )
+        # Keep only rows that actually have AC text
+        rows_with_custom_acceptance_criteria = data_layer_sheet[
+            data_layer_sheet["Acceptance Criteria"] != ""
+        ]
+
+        # 3) Build a lookup so we can quickly find AC by (Notes, Remediation) key
+        #    Now we also store an optional "AC Reference Link" if present.
+        acceptance_criteria_lookup: dict[tuple[str, str], dict] = {}
+        for _, row in rows_with_custom_acceptance_criteria.iterrows():
+            notes_key       = str(row["Notes"]).strip()
+            remediation_key = str(row["Remediation Techniques"]).strip()
+
+            # pull the custom AC text itself
+            acceptance_criteria_text = row.get("Acceptance Criteria", "").strip()
+
+            # read your two new columns
+            ac_reference_link = row.get("AC Reference Link (full or minified URL)")
+            ac_reference_name = row.get("AC Reference Name (friendly text)")
+
+            # normalize link
+            if pd.notna(ac_reference_link):
+                ac_reference_link = ac_reference_link.strip()
+            else:
+                ac_reference_link = None
+
+            # normalize friendly text
+            if pd.notna(ac_reference_name):
+                ac_reference_name = ac_reference_name.strip()
+            else:
+                ac_reference_name = None
+
+            acceptance_criteria_lookup[(notes_key, remediation_key)] = {
+                "text":            acceptance_criteria_text,
+                "reference_link":  ac_reference_link,
+                "reference_name":  ac_reference_name
+            }
 
         # Pre-aggregate remediation techniques for grouped rows
         grouped_data = {}
@@ -170,9 +218,9 @@ def create_pbis_from_excel(excel_path, pat):
             for index, row in summary.iterrows():
                 group_val = row.get("Group")
                 if pd.notna(group_val):
-                    excel_row_number = index + 2  
-                                     
-                    # Build the list of resource entries for grouped PBIs.
+                    excel_row_number = index + 2
+
+                    # Build the list of resource entries for grouped PBIs
                     resource_entries = []
                     for col_index in range(resources_column_index, summary_sheet.max_column + 1):
                         cell = summary_sheet.cell(row=excel_row_number, column=col_index)
@@ -180,24 +228,41 @@ def create_pbis_from_excel(excel_path, pat):
                         if resource_text:
                             if cell.hyperlink:
                                 url = cell.hyperlink.target
-                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                                resource_entries.append(f'<a href="{safe_html(url)}">{safe_html(resource_text)}</a>')
                             elif resource_text in resource_lookup:
                                 url = resource_lookup[resource_text]
-                                resource_entries.append(f'<li><a href="{safe_html(url)}">{safe_html(resource_text)}</a></li>')
+                                resource_entries.append(f'<a href="{safe_html(url)}">{safe_html(resource_text)}</a>')
                             else:
-                                resource_entries.append(f'<li>{safe_html(resource_text)}</li>')
+                                # plain text fragment (no <li>)
+                                trimmed = (resource_text or "").strip()
+                                if trimmed:  # skip whitespace-only cells
+                                    resource_entries.append(safe_html(trimmed))
 
+                    # Look up custom acceptance criteria for this row
+                    notes_key = str(row.get("Notes", "")).strip()
+                    remediation_key = str(row.get("Remediation Techniques", "")).strip()
+                    
+                    entry = acceptance_criteria_lookup.get((notes_key, remediation_key), {})
+
+                    # Safely extract text and link from lookup
+                    acceptance_criteria_text = entry.get("text")
+                    acceptance_criteria_link = entry.get("reference_link")
+                    acceptance_criteria_name = entry.get("reference_name")
+
+                    # Append entry with both AC text and link
                     if group_val not in grouped_data:
                         grouped_data[group_val] = []
+
                     grouped_data[group_val].append({
                         "recommendation": safe_html(row.get("Conformance Recommendation", "")),
                         "notes": safe_html(row.get("Notes", "")),
                         "remediation": safe_html(row.get("Remediation Techniques", "")),
                         "description": safe_html(row.get("Description", "")),
-                        "resources": resource_entries
+                        "resources": resource_entries,
+                        "acceptance_criteria": acceptance_criteria_text,
+                        "acceptance_criteria_link": acceptance_criteria_link,
+                        "acceptance_criteria_name": acceptance_criteria_name
                     })
-
-
         
         # Dictionary to store created PBI URL for each group
         group_pbi_map = {}
@@ -300,12 +365,49 @@ def create_pbis_from_excel(excel_path, pat):
                     notes_escaped,
                     remediation_list,
                     resources_html
-    )
-            # Build the acceptance criteria HTML
-            acceptance_criteria = build_acceptance_criteria_html(
-                page_url_escaped,
-                page_name_escaped
-            )
+        )
+         
+            # CUSTOM vs DEFAULT Acceptance Criteria
+            if pd.notna(group_val):
+                # For grouped PBIs, build an ordered list of all ACs
+                acceptance_criteria = build_grouped_acceptance_criteria_html(
+                    grouped_data.get(group_val, []),
+                    format_custom_acceptance_criteria,
+                    page_url_escaped,
+                    testing_account_html
+                )
+            else:
+                # For non-grouped PBIs, use single-item logic
+                note = str(row.get("Notes", "")).strip()
+                rem  = str(row.get("Remediation Techniques", "")).strip()
+
+                # pull our lookup entry (or {} if missing)
+                entry = acceptance_criteria_lookup.get((note, rem), {})
+
+                raw_acceptance_criteria = entry.get("text")
+                if raw_acceptance_criteria:
+                    # build the custom AC
+                    acceptance_criteria = format_custom_acceptance_criteria(
+                        raw_acceptance_criteria,
+                        page_url_escaped,
+                        testing_account_html
+                    )
+
+                    # now append Reference link + friendly name if present
+                    ref_link = entry.get("reference_link")
+                    if ref_link:
+                        ref_name  = entry.get("reference_name")
+                        link_text = safe_html(ref_name) if ref_name else safe_html(ref_link)
+                        acceptance_criteria += (
+                            f'<p><strong>Reference:</strong> '
+                            f'<a href="{safe_html(ref_link)}">{link_text}</a></p>'
+                        )
+                else:
+                    # fall back to default AC
+                    acceptance_criteria = build_acceptance_criteria_html(
+                        page_url_escaped,
+                        page_name_escaped
+                    )
 
 
             priority = map_priority(row['Priority'])
