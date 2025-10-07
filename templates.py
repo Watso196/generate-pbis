@@ -2,15 +2,8 @@ from helpers import safe_html
 
 def build_description_html(page_name, page_url, testing_account_html, recommendation, notes, remediation_list, resources_html):
     return (
-        "Please check the following (and delete this list when you're done!):"
-        "<ul>"
-        "<li>Combine any easily combine-able work into one PBI, rather than making them separate work items.</li>"
-        "<li>Please keep your PBI scope to an 8 effort or lower, if possible.</li>"
-        "<li>Check your tags! Aside from generated tags, you should add a tag for the site that was tested, e.g. WSS</li>"
-        "<li>If your PBI needs a predecessor research PBI, create one and add the tags Spike, [Page Name] Page, Ready for Refinement. Then relate it to this PBI as a Predecessor!</li>"
-        "</ul>"
         "<h1>PBI Goal</h1>"
-        f"<p>Update the {page_name} page's [general description of component update to be made] ...<p><br />"
+        f"<p>Update the {page_name} [general description of component update to be made] ...<p><br />"
         "<ul>"
         f'<li><a href="{page_url}">Reference page</a>{testing_account_html}</li>'
         f"<li>{recommendation}</li>"
@@ -19,7 +12,6 @@ def build_description_html(page_name, page_url, testing_account_html, recommenda
         "<li>Resources:<ul>"
         f"{resources_html}"
         "</ul></li></ul><br />"
-        "<p>This change is important because [why this matters for users]</p>"
     )
 
 def render_single_remediation(remediation, description=""):
@@ -33,7 +25,7 @@ def render_single_remediation(remediation, description=""):
 def build_grouped_description_html(page_name, page_url, testing_account_html, remediation_list_html):
     return (
         "<h1>PBI Goal</h1>"
-        f"<p>Update the {page_name} page's [general description of component update to be made] ...</p><br />"
+        f"<p>Update the {page_name} [general description of component update to be made] ...</p><br />"
         f'<p><a href="{page_url}">Reference page</a>{testing_account_html}</p>'
         f"{remediation_list_html}"
         "<br />"
@@ -74,17 +66,9 @@ def render_grouped_remediations(grouped_remediation_entries):
 def build_acceptance_criteria_html(page_url, page_name):
     return (
         "<h2>Testing Requirements</h2>"
-        "<ul><li>Keyboard</li>"
-        "<li>Screen Reader</li>"
-        "<li>HTML</li>"
-        "<li>etc. add any other kinds of testing you might need and remove those you don't!</li></ul>"
-        "<h2>Keyboard Testing</h2>"
-        f'<ul><li>Visit the <a href="{page_url}">{page_name} page</a></li>'
-        "<li>[List testing steps]</li></ul>"
-        "<h2>Screen Reader Testing</h2>"
-        f'<ul><li>Visit the <a href="{page_url}">{page_name} page</a></li>'
-        "<li>[List testing steps]</li></ul>"
-        "<h2>HTML</h2>"
+        "<ul><li>[Your required testing type here]</li>"
+        "</ul>"
+        "<h2>[Testing Type Heading]</h2>"
         f'<ul><li>Visit the <a href="{page_url}">{page_name} page</a></li>'
         "<li>[List testing steps]</li></ul>"
     )
