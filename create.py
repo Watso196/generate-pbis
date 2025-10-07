@@ -286,7 +286,7 @@ def create_pbis_from_excel(excel_path, pat):
             group_val = row.get("Group")
 
             # Map the columns to the corresponding PBI fields
-            title = f"Remediation - {page_name} - {row['Notes'][:50]}"  # Limiting title to 50 characters
+            title = f"Remediation - {page_name} - "  # Limiting title to 50 characters
 
             # Escape the content to prevent HTML injection
             page_name_escaped = html.escape(page_name)
