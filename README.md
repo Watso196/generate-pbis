@@ -35,7 +35,7 @@ This Python script automates the creation of accessibility remediation Product B
    pip install [python-library]
    ```
 
-   To run the viertual environment, run `venv/bin/activate`.
+   To run the virtual environment, run `venv/bin/activate`.
 
 ## Environment Variables
 
@@ -58,8 +58,9 @@ Ensure that the relevant report details are filled out:
   - Any Account Login in row 5 should be a URL to log in to WebstaurantStore in the develop environment.
 - Findings Summary:
   - Ensure that all of your data has been added to the Findings Summary.
-  - Each row should only contain one issue, unless you intend to group issues of the same WCAG failure into the same PBI.
+  - Each row should only contain one issue
   - If you'd like the script to skip generating a PBI for an issue, you can add a note to the PBI column describing why it should be skipped. This will cause the script to skip the row.
+  - Group any related issues together by entering matching values in the Group column. Issues with matching values will be combined into one PBI during generation.
 
 Download an Excel copy of your accessibility audit report.
 
@@ -67,7 +68,7 @@ Download an Excel copy of your accessibility audit report.
 
 If you do not already have an ADO Personal Access Token (PAT) then follow these steps:
 
-1. [Visit ADO](https://tfs.clarkinc.biz/DefaultCollection/_work)
+1. Visit ADO
 2. Select your user settings menu item in the top left of the screen
 3. Select "Security" from the popup menu to be taken to the Security page
 4. If you haven't landed on the Personal Access Tokens page, use the left-hand sidebar to navigate to Personal Access Tokens
@@ -88,12 +89,12 @@ python3 create.py
 ```
 
 2. You will be prompted to enter your ADO Personal Access Token (PAT).
-3. You'll be prompted to enter the path to your downloaded Excel file. Make sure the path is valid; you will have up to three attempts.
+3. You'll be prompted to enter the path to your downloaded Excel file. Make sure the path is valid; you will have up to three attempts before the script closes.
 4. Upon successful creation of PBIs, you will see confirmation messages with the corresponding PBI IDs and PBI URLs.
-5. The script will also write the PBI URLs into the downloaded Excel file you pointed it to. You can then either upload the newly updated Excel file (just make sure it has an appropriate name), or copy the generated Remediation PBI column data into your online Excel file.
+5. The script will also write the PBI URLs into the downloaded Excel file you pointed it to. You should copy the generated Remediation PBI column data into your online Excel file.
 
 ## Important Notes
 
 - Ensure that your Excel file is properly structured, using the latest version of the accessibility audit report. Otherwise, this script will likely fail to find important information.
 - Review the Azure DevOps API documentation for any updates or changes regarding work item creation.
-- If you encounter any failures with this script, please reach out to Kalib Watson with a description of your issue and your attempted resolution methods.
+- If you encounter any failures with this script, please reach out to Kalib Watson or another Accessibility team member with a description of your issue and your attempted resolution methods.
