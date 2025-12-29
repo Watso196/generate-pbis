@@ -10,6 +10,7 @@ This Python script automates the creation of accessibility remediation Product B
 - Automatically links created PBIs to a referenced parent feature.
 - Adds the PBI link to Remediation PBI column of your downloaded Excel file.
 - Supports "Group" column and creates grouped PBIs
+- Creates different information and tags for App PBIs
 
 ## Requirements
 
@@ -51,11 +52,11 @@ This repo uses the [python-dotenv](https://pypi.org/project/python-dotenv/) pack
 Ensure that the relevant report details are filled out:
 
 - Report Details:
-  - Page Name in row 6 should be the description of the page without the word "page" included, e.g. "Category" or "PDP"
-  - The URL in row 4 should lead to the page you tested against. If multiple pages were tested please only list the main page URL here!
-    - Note: If you tested a production page, the script will automatically redirect to the develop page when linking the page in your PBIs.
+  - Page Name for app audits in row 6 should be the description of the page without the word "page" or "view" included, e.g. "Category" or "PDP"
+  - The URL or Page Location in row 4 should lead to the page you tested against for web pages, or describe how to reach the page in the App, e.g. "Home -> select Plastic Cups from Categories list". If multiple pages were tested please only list the main page URL or location here!
+    - Note: If you tested a production web page, the script will automatically redirect to the develop page URL when linking the page in your PBIs.
   - The Parent Feature ID in row 12 should contain either the number ID of the parent Feature to this PBI, or a link to that Feature. The script will extract the Feature ID if you provide a link.
-  - Any Account Login in row 5 should be a URL to log in to WebstaurantStore in the develop environment.
+  - Any Account Login in row 5 should either be a URL to log in to WebstaurantStore in the develop environment for web pages, or a Session or User ID for the App, with clarity on which, e.g. "Session ID: 1234567"
 - Findings Summary:
   - Ensure that all of your data has been added to the Findings Summary.
   - Each row should only contain one issue

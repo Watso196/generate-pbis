@@ -10,13 +10,11 @@ import truststore
 from helpers import safe_html, format_custom_acceptance_criteria, build_resource_lookup
 
 from templates import (
-    build_description_html,
-    build_grouped_description_html,
-    build_acceptance_criteria_html,
+    build_app_description_html,
+    build_app_grouped_description_html,
+    build_app_acceptance_criteria_html,
     render_grouped_remediations,
     render_single_remediation,
-    build_custom_acceptance_criteria_list,
-    build_custom_acceptance_criteria_paragraph,
     build_grouped_acceptance_criteria_html
 )
 
@@ -125,7 +123,7 @@ def create_pbis_from_excel(excel_path, pat):
         
         # Extract information from the 'Report Details' sheet
         page_name = report_details_sheet.cell(row=6, column=2).value
-        page_url = report_details_sheet.cell(row=4, column=2).value
+        page_location = report_details_sheet.cell(row=4, column=2).value
         feature_id = report_details_sheet.cell(row=12, column=2).value
         testing_account_cell = report_details_sheet.cell(row=5, column=2)
 
@@ -134,12 +132,6 @@ def create_pbis_from_excel(excel_path, pat):
             print("ERROR: Feature ID is missing from the Report Details sheet. This must be filled in before creating PBIs.")
             print("Exiting script early — no PBIs were created.\n")
             return
-
-        # Check that the page URL points to the development environment
-        if str(page_url).startswith("https://www.webstaurantstore.com"):
-            # If not a development URL, replace with the development URL
-            page_url_base = "https://www.dev.webstaurantstore.com"
-            page_url = page_url.replace("https://www.webstaurantstore.com", page_url_base)
         
         # Check that feature_id is not a hyperlink
         if feature_id and str(feature_id).startswith("https://"):
@@ -290,7 +282,7 @@ def create_pbis_from_excel(excel_path, pat):
 
             # Escape the content to prevent HTML injection
             page_name_escaped = html.escape(page_name)
-            page_url_escaped = html.escape(page_url)
+            page_location_escaped = html.escape(page_location)
             notes_escaped = safe_html(row.get('Notes', ''))
             recommendation_escaped = safe_html(row.get('Conformance Recommendation', ''))
             remediation_escaped = safe_html(row.get('Remediation Techniques', ''))
@@ -350,16 +342,16 @@ def create_pbis_from_excel(excel_path, pat):
        
             # Build the description HTML based on whether it's a grouped row or not
             if pd.notna(group_val):
-                description = build_grouped_description_html(
+                description = build_app_grouped_description_html(
                         page_name_escaped,
-                        page_url_escaped,
+                        page_location_escaped,
                         testing_account_html,
                         remediation_list
                 )
             else:
-                description = build_description_html(
+                description = build_app_description_html(
                     page_name_escaped,
-                    page_url_escaped,
+                    page_location_escaped,
                     testing_account_html,
                     recommendation_escaped,
                     notes_escaped,
@@ -373,7 +365,7 @@ def create_pbis_from_excel(excel_path, pat):
                 acceptance_criteria = build_grouped_acceptance_criteria_html(
                     grouped_data.get(group_val, []),
                     format_custom_acceptance_criteria,
-                    page_url_escaped,
+                    page_location_escaped,
                     testing_account_html
                 )
             else:
@@ -390,7 +382,8 @@ def create_pbis_from_excel(excel_path, pat):
                     acceptance_criteria = format_custom_acceptance_criteria(
                         raw_acceptance_criteria,
                         testing_account_html,
-                        page_url=page_url_escaped
+                        page_location=page_location_escaped,
+                        is_app=True
                     )
 
                     # now append Reference link + friendly name if present
@@ -404,14 +397,14 @@ def create_pbis_from_excel(excel_path, pat):
                         )
                 else:
                     # fall back to default AC
-                    acceptance_criteria = build_acceptance_criteria_html(
-                        page_url_escaped,
+                    acceptance_criteria = build_app_acceptance_criteria_html(
+                        page_location_escaped,
                         page_name_escaped
                     )
 
 
             priority = map_priority(row['Priority'])
-            tags = f"Remediation,Accessibility,{page_name} Page"
+            tags = f"Remediation,Accessibility,{page_name} View"
 
             # Process grouped rows differently
             if pd.notna(group_val):

@@ -14,6 +14,20 @@ def build_description_html(page_name, page_url, testing_account_html, recommenda
         "</ul></li></ul><br />"
     )
 
+def build_app_description_html(page_name, page_location, testing_account_html, recommendation, notes, remediation_list, resources_html):
+    return (
+        "<h1>PBI Goal</h1>"
+        f"<p>Update the {page_name} [general description of component update to be made] ...<p><br />"
+        "<ul>"
+        f'<li>Visit the {page_name} by going to {page_location} - log in with {testing_account_html}</li>'
+        f"<li>{recommendation}</li>"
+        f"<li>{notes}</li>"
+        f"<ul>{remediation_list}</ul>"
+        "<li>Resources:<ul>"
+        f"{resources_html}"
+        "</ul></li></ul><br />"
+    )
+
 def render_single_remediation(remediation, description=""):
     items = [f"<li>{remediation}</li>"]
     if description:
@@ -27,6 +41,16 @@ def build_grouped_description_html(page_name, page_url, testing_account_html, re
         "<h1>PBI Goal</h1>"
         f"<p>Update the {page_name} [general description of component update to be made] ...</p><br />"
         f'<p><a href="{page_url}">Reference page</a>{testing_account_html}</p>'
+        f"{remediation_list_html}"
+        "<br />"
+        "<p>These changes are important because [why this matters for users]</p>"
+    )
+
+def build_app_grouped_description_html(page_name, page_location, testing_account_html, remediation_list_html):
+    return (
+        "<h1>PBI Goal</h1>"
+        f"<p>Update the {page_name} view's [general description of component update to be made] ...</p><br />"
+        f'<p>Visit the {page_name} by going to {page_location} - log in with {testing_account_html}</p>'
         f"{remediation_list_html}"
         "<br />"
         "<p>These changes are important because [why this matters for users]</p>"
@@ -73,6 +97,16 @@ def build_acceptance_criteria_html(page_url, page_name):
         "<li>[List testing steps]</li></ul>"
     )
 
+def build_app_acceptance_criteria_html(page_location, page_name):
+    return (
+        "<h2>Testing Requirements</h2>"
+        "<ul><li>[Your required testing type here]</li>"
+        "</ul>"
+        "<h2>[Testing Type Heading]</h2>"
+        f'<ul><li>Visit the {page_name} by going to {page_location}</li>'
+        "<li>[List testing steps]</li></ul>"
+    )
+
 # Wraps multiple acceptance criteria steps in a <ul> with a heading.
 def build_custom_acceptance_criteria_list(list_items_html, page_url, testing_account_html):
     # Always prepend the "Visit testing page" item
@@ -84,6 +118,16 @@ def build_custom_acceptance_criteria_list(list_items_html, page_url, testing_acc
         "</ul>"
     )
 
+def build_app_custom_acceptance_criteria_list(list_items_html, page_location, testing_account_html):
+    # Always prepend the "Visit testing page" item
+    return (
+        f"<h2>Testing Requirements</h2>"
+        "<ul>"
+        f'<li>Visit {page_name} by going to {page_location} - log in  to {testing_account_html}</li>'
+        f"{list_items_html}"
+        "</ul>"
+    )
+
 # Wraps a single acceptance criteria item in a <p> with a heading.
 def build_custom_acceptance_criteria_paragraph(text_html, page_url, testing_account_html):
     # Always prepend the "Visit testing page" item even for a single AC
@@ -91,6 +135,16 @@ def build_custom_acceptance_criteria_paragraph(text_html, page_url, testing_acco
         f"<h2>Testing Requirements</h2>"
         "<ul>"
         f'<li>Visit <a href="{page_url}">testing page</a>{testing_account_html}</li>'
+        f"<li>{text_html}</li>"
+        "</ul>"
+    )
+
+def build_app_custom_acceptance_criteria_paragraph(text_html, page_location, testing_account_html):
+    # Always prepend the "Visit testing page" item even for a single AC
+    return (
+        f"<h2>Testing Requirements</h2>"
+        "<ul>"
+        f'<li>Visit {page_name} by going to {page_location} - log in  to {testing_account_html}</li>'
         f"<li>{text_html}</li>"
         "</ul>"
     )
