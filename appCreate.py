@@ -142,9 +142,9 @@ def create_pbis_from_excel(excel_path, pat):
                 feature_id = feature_id.split("/")[-1]
         
         # Check if the testing account cell has a hyperlink (indicating it's valid)
-        if testing_account_cell.hyperlink:
-            testing_account_url = testing_account_cell.hyperlink.target
-            testing_account_html = f'<ul><li>Log in with <a href="{html.escape(testing_account_url)}">this account</a></li></ul>'
+        if testing_account_cell.value:
+            testing_account_info = testing_account_cell.value
+            testing_account_html = f'<ul><li>Log in with {testing_account_info}</li></ul>'
         else:
             testing_account_html = ""  # If no hyperlink, leave it empty
 

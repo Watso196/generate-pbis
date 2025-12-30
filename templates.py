@@ -19,7 +19,7 @@ def build_app_description_html(page_name, page_location, testing_account_html, r
         "<h1>PBI Goal</h1>"
         f"<p>Update the {page_name} [general description of component update to be made] ...<p><br />"
         "<ul>"
-        f'<li>Visit the {page_name} by going to {page_location} - log in with {testing_account_html}</li>'
+        f'<li>Visit the {page_name} view: {page_location}{testing_account_html}</li>'
         f"<li>{recommendation}</li>"
         f"<li>{notes}</li>"
         f"<ul>{remediation_list}</ul>"
@@ -50,7 +50,7 @@ def build_app_grouped_description_html(page_name, page_location, testing_account
     return (
         "<h1>PBI Goal</h1>"
         f"<p>Update the {page_name} view's [general description of component update to be made] ...</p><br />"
-        f'<p>Visit the {page_name} by going to {page_location} - log in with {testing_account_html}</p>'
+        f'<p>Visit the {page_name} view: {page_location}{testing_account_html}</p>'
         f"{remediation_list_html}"
         "<br />"
         "<p>These changes are important because [why this matters for users]</p>"
@@ -103,7 +103,7 @@ def build_app_acceptance_criteria_html(page_location, page_name):
         "<ul><li>[Your required testing type here]</li>"
         "</ul>"
         "<h2>[Testing Type Heading]</h2>"
-        f'<ul><li>Visit the {page_name} by going to {page_location}</li>'
+        f'<ul><li>Visit the {page_name} view: {page_location}{testing_account_html}</li>'
         "<li>[List testing steps]</li></ul>"
     )
 
@@ -123,7 +123,7 @@ def build_app_custom_acceptance_criteria_list(list_items_html, page_location, te
     return (
         f"<h2>Testing Requirements</h2>"
         "<ul>"
-        f'<li>Visit {page_name} by going to {page_location} - log in  to {testing_account_html}</li>'
+        f'<li>Visit {page_name}: {page_location}{testing_account_html}</li>'
         f"{list_items_html}"
         "</ul>"
     )
@@ -144,7 +144,7 @@ def build_app_custom_acceptance_criteria_paragraph(text_html, page_location, tes
     return (
         f"<h2>Testing Requirements</h2>"
         "<ul>"
-        f'<li>Visit {page_name} by going to {page_location} - log in  to {testing_account_html}</li>'
+        f'<li>Visit {page_name}: {page_location}{testing_account_html}</li>'
         f"<li>{text_html}</li>"
         "</ul>"
     )
