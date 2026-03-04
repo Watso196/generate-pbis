@@ -35,7 +35,7 @@ This Python script automates the creation of accessibility remediation Product B
    pip install [python-library]
    ```
 
-   To run the virtual environment, run `venv/bin/activate`.
+   To run the virtual environment, run `source venv/bin/activate`.
 
 ## Environment Variables
 
@@ -43,6 +43,7 @@ This repo uses the [python-dotenv](https://pypi.org/project/python-dotenv/) pack
 
 - Create `.env` file in the root directory
 - Add `ORG_URL = "[url_goes_here]"` to the `.env` file
+  - Reach out to Kalib Watson for this URL
 - Create a `.gitignore` file and add `.env` to it
 - Install the `python-dotenv` package: `pip3 install python-dotenv`
 
